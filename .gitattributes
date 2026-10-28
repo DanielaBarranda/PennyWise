@@ -1,0 +1,10 @@
+# Store every text file with Linux (LF) line endings. The app is deployed to
+# Linux EC2 instances, where Windows (CRLF) endings break shell scripts,
+# systemd unit files and Nginx configs.
+* text=auto eol=lf
+
+# Binary files: never touch them.
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary

@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+dist/
+bin/
+obj/
+publish/
+
+# Local databases (real data lives on the server, never in Git)
+*.db
+*.db-shm
+*.db-wal
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+appsettings.*.local.json
+
+# Editors and OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Claude Code local settings
+.claude/settings.local.json
