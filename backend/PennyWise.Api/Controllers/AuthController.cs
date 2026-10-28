@@ -128,13 +128,16 @@ public class AuthController(
         return NoContent();
     }
 
-    // Lets the web app restore the session after a page refresh.
+    // Lets the web app restore the session after a page refresh. "Nobody is signed
+    // in" is a normal answer here, so it is 204 rather than an error status that
+    // browsers would print as a red console error on every visit to the login page.
     [HttpGet("me")]
+    [AllowAnonymous]
     public async Task<ActionResult<UserResponse>> Me()
     {
-        var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) return NoContent();
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
-        return user is null ? Unauthorized() : UserResponse.From(user);
+        return user is null ? NoContent() : UserResponse.From(user);
     }
 
     private Task SignInAsync(User user)

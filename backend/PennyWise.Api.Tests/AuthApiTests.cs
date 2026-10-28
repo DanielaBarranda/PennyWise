@@ -84,7 +84,7 @@ public class AuthApiTests : ApiTestBase
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         Assert.Equal(DefaultEmail, me!.Email);
         Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, meAfter.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, meAfter.StatusCode); // signed out: "nobody", not an error
     }
 
     [Fact]
@@ -116,11 +116,16 @@ public class AuthApiTests : ApiTestBase
     [InlineData("GET", "/api/dashboard/summary?month=2026-10")]
     [InlineData("GET", "/api/expenses/1")]
     [InlineData("DELETE", "/api/expenses/1")]
-    [InlineData("GET", "/api/auth/me")]
     public async Task Financial_endpoints_require_sign_in(string method, string url)
     {
         var response = await NewClient().SendAsync(new HttpRequestMessage(new HttpMethod(method), url));
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Who_am_I_answers_no_content_when_signed_out()
+    {
+        Assert.Equal(HttpStatusCode.NoContent, (await NewClient().GetAsync("/api/auth/me")).StatusCode);
     }
 
     [Fact]

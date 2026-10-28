@@ -40,7 +40,7 @@ Errors use ASP.NET Core's standard **ProblemDetails** format:
 ## Accounts and sign-in
 
 Every endpoint below requires a signed-in user, except `POST /api/auth/register`,
-`POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/health`.
+`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` and `GET /api/health`.
 
 - **Session:** signing in sets the cookie `pennywise_session` (HttpOnly, SameSite=Strict,
   Secure in production, 7 days, renewed while in use). The browser sends it automatically;
@@ -55,7 +55,7 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `{ id, name, email }`, signed in |
 | POST | `/api/auth/login` | `{ email, password }` | 200 `{ id, name, email }`, signed in |
 | POST | `/api/auth/logout` | | 204, cookie removed |
-| GET | `/api/auth/me` | | 200 `{ id, name, email }`, or 401 |
+| GET | `/api/auth/me` | | 200 `{ id, name, email }`, or 204 when nobody is signed in |
 
 Rules: name 1–80 characters; a valid email up to 254 characters, unique ignoring case and
 spaces; password 8–128 characters with at least one letter and one number; a wrong email
