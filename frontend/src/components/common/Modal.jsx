@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef } from 'react'
+import Icon from './Icon.jsx'
 
 // Built on the native <dialog> element: showModal() traps keyboard focus inside,
 // makes the rest of the page inert, and returns focus to the opening button on close.
-export default function Modal({ open, title, onClose, children, wide = false }) {
+export default function Modal({ open, title, description, onClose, children, wide = false }) {
   const ref = useRef(null)
   const titleId = useId()
+  const descriptionId = useId()
 
   useEffect(() => {
     const dialog = ref.current
@@ -21,6 +23,7 @@ export default function Modal({ open, title, onClose, children, wide = false }) 
       ref={ref}
       className={`modal${wide ? ' modal--wide' : ''}`}
       aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       // Escape key: let React state decide whether the dialog closes.
       onCancel={(event) => {
         event.preventDefault()
@@ -32,9 +35,16 @@ export default function Modal({ open, title, onClose, children, wide = false }) 
       {open && (
         <div className="modal__panel">
           <header className="modal__header">
-            <h2 id={titleId}>{title}</h2>
+            <div>
+              <h2 id={titleId}>{title}</h2>
+              {description && (
+                <p id={descriptionId} className="modal__description">
+                  {description}
+                </p>
+              )}
+            </div>
             <button type="button" className="icon-button" onClick={onClose} aria-label="Close dialog">
-              ×
+              <Icon name="close" />
             </button>
           </header>
           {children}

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
 import Modal from '../common/Modal.jsx'
 import FormField from '../common/FormField.jsx'
+import Icon from '../common/Icon.jsx'
+import CategoryPicker from './CategoryPicker.jsx'
 import { api } from '../../services/api.js'
 import { useToast } from '../../hooks/useToast.js'
-import { CATEGORIES, MAX_DESCRIPTION_LENGTH } from '../../utils/constants.js'
+import { MAX_DESCRIPTION_LENGTH } from '../../utils/constants.js'
 import { defaultDateForMonth } from '../../utils/dates.js'
 import { formatMonth, formatPeso } from '../../utils/format.js'
 import { validateExpense } from '../../utils/validation.js'
@@ -13,7 +15,12 @@ export default function ExpenseFormModal({ open, expense, month, onClose, onSave
   const [saving, setSaving] = useState(false)
 
   return (
-    <Modal open={open} title={expense ? 'Edit expense' : 'Add expense'} onClose={saving ? () => {} : onClose}>
+    <Modal
+      open={open}
+      title={expense ? 'Edit expense' : 'Add expense'}
+      description={expense ? 'Changes update your totals right away.' : 'Record something you spent.'}
+      onClose={saving ? () => {} : onClose}
+    >
       <ExpenseForm expense={expense} month={month} onCancel={onClose} onSaved={onSaved} onSavingChange={setSaving} />
     </Modal>
   )
@@ -76,22 +83,29 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
     <form ref={formRef} className="form" onSubmit={handleSubmit} noValidate>
       {formError && (
         <p className="form__error" role="alert">
+          <Icon name="alert" size={18} />
           {formError}
         </p>
       )}
 
       <div className="form__row">
-        <FormField label="Amount (₱)" error={errors.amount}>
+        <FormField label="Amount" error={errors.amount}>
           {(props) => (
-            <input
-              {...props}
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0.00"
-              value={form.amount}
-              onChange={update('amount')}
-            />
+            <div className="input-affix input-affix--large">
+              <span className="input-affix__prefix" aria-hidden="true">
+                ₱
+              </span>
+              <input
+                {...props}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="0.00"
+                data-autofocus
+                value={form.amount}
+                onChange={update('amount')}
+              />
+            </div>
           )}
         </FormField>
 
@@ -100,15 +114,11 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
         </FormField>
       </div>
 
-      <FormField label="Category" error={errors.category}>
-        {(props) => (
-          <select {...props} value={form.category} onChange={update('category')}>
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        )}
-      </FormField>
+      <CategoryPicker
+        value={form.category}
+        onChange={(category) => setForm((f) => ({ ...f, category }))}
+        error={errors.category}
+      />
 
       <FormField
         label="Description"

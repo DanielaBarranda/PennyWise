@@ -1,37 +1,57 @@
-/* Design tokens. Text colors are checked for at least 4.5:1 contrast on the
-   backgrounds they are used on; gold is used for accents, never for body text. */
+/* PennyWise design tokens.
+   Text colors are checked for at least 4.5:1 contrast on the surfaces they sit on.
+   Gold (#d8ad42) is only used on dark surfaces; on light surfaces gold text uses --gold-ink. */
 :root {
-  --color-primary: #8b1e2d;
-  --color-primary-hover: #741825;
-  --color-primary-dark: #5c121d;
-  --color-gold: #d4a531;
-  --color-gold-soft: #f6e7c1;
-  --color-gold-text: #7a5a0c;
+  /* Brand */
+  --charcoal: #171719;
+  --charcoal-2: #212024;
+  --charcoal-3: #2c2a2f;
+  --burgundy: #671824;
+  --burgundy-hover: #561420;
+  --burgundy-deep: #3f0e17;
+  --crimson: #d93645;
+  --gold: #d8ad42;
+  --gold-soft: #f2dfa8;
+  --gold-ink: #7a5a0c;
 
-  --color-bg: #f7f4ef;
-  --color-surface: #ffffff;
-  --color-surface-alt: #faf8f4;
-  --color-text: #1f1a17;
-  --color-muted: #5e5650;
-  --color-border: #e4ddd3;
+  /* Neutrals */
+  --paper: #f7f4ef;
+  --surface: #ffffff;
+  --surface-sunk: #f2eee7;
+  --line: #e7e0d6;
+  --line-strong: #cfc5b8;
+  --text: #1c1a1d;
+  --muted: #5f5852;
+  --on-dark: #f6f1ea;
+  --on-dark-muted: #c9bfb4;
 
-  --color-success: #1f7a4d;
-  --color-success-bg: #e6f4ec;
-  --color-warning: #7a5300;
-  --color-warning-bg: #fff4d6;
-  --color-warning-bar: #c98a00;
-  --color-danger: #b42318;
-  --color-danger-bg: #fdecea;
+  /* Status */
+  --success: #1d7348;
+  --success-bg: #e4f2ea;
+  --warning: #855600;
+  --warning-bg: #fcefd2;
+  --warning-bar: #d99a1b;
+  --danger: #b42318;
+  --danger-bg: #fce8e6;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow: 0 1px 2px rgb(31 26 23 / 6%), 0 4px 12px rgb(31 26 23 / 5%);
-  --shadow-lg: 0 12px 40px rgb(31 26 23 / 22%);
-  --focus-ring: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-primary);
+  /* Shape: larger radius = more important surface */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
 
-  --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --sidebar-width: 240px;
+  --shadow-card: 0 1px 2px rgb(28 26 29 / 5%);
+  --shadow-raised: 0 10px 30px -14px rgb(63 14 23 / 45%);
+  --shadow-pop: 0 24px 60px -20px rgb(23 23 25 / 45%);
+
+  --focus: var(--crimson);
+
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+
+  --sidebar-width: 236px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   color-scheme: light;
 }
@@ -49,11 +69,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 1rem;
   line-height: 1.5;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--text);
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -64,19 +84,25 @@ p {
   margin: 0;
 }
 
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
 h1 {
-  font-size: 1.625rem;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+  line-height: 1.1;
 }
 
 h2 {
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   line-height: 1.3;
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--burgundy);
 }
 
 button,
@@ -86,16 +112,24 @@ select {
   color: inherit;
 }
 
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
 :focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: 2.5px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* Headings and <main> receive focus from code only; no ring needed there. */
 h1:focus,
 main:focus {
   outline: none;
-  box-shadow: none;
 }
 
 /* Money is easier to compare when digits line up. */
@@ -125,10 +159,10 @@ main:focus {
   top: 8px;
   left: 8px;
   z-index: 100;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-primary);
+  padding: 10px 16px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--burgundy);
   font-weight: 600;
   transform: translateY(-150%);
 }
@@ -142,6 +176,7 @@ main:focus {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

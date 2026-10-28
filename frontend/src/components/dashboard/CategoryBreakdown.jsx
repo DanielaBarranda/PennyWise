@@ -1,15 +1,16 @@
+import { CategoryIcon } from '../common/CategoryBadge.jsx'
+import Icon from '../common/Icon.jsx'
 import { EmptyState } from '../common/States.jsx'
 import { CATEGORY_COLORS } from '../../utils/constants.js'
 import { formatPercent, formatPeso } from '../../utils/format.js'
 
-// A horizontal bar chart drawn with plain CSS. Every bar also shows its value
-// as text, so the chart needs no separate screen-reader table and no chart library.
+// One row per category with spending or a limit. With a limit, the bar shows how
+// much of that limit is used; without one, it shows the category's share of the
+// month's spending. Every bar value is also written out as text.
 export default function CategoryBreakdown({ summary }) {
-  // Categories with spending, plus any with a limit, so users can see untouched budgets too.
-  const spent = summary.categories
+  const rows = summary.categories
     .filter((c) => c.total > 0 || c.limit !== null)
     .sort((a, b) => b.total - a.total)
-  const largest = spent[0]?.total ?? 0
 
   return (
     <section className="card" aria-labelledby="breakdown-heading">
@@ -17,41 +18,58 @@ export default function CategoryBreakdown({ summary }) {
         <h2 id="breakdown-heading">Spending by category</h2>
       </div>
 
-      {spent.length === 0 ? (
-        <EmptyState title="No spending yet" message="Category totals will appear once you add expenses." />
+      {rows.length === 0 ? (
+        <EmptyState compact title="Nothing spent yet" message="Each category’s total appears here once you add expenses." />
       ) : (
         <ul className="breakdown">
-          {spent.map((c) => {
-            const share = summary.totalSpent > 0 ? (c.total / summary.totalSpent) * 100 : 0
-            return (
-              <li key={c.category} className="breakdown__item">
-                <div className="breakdown__row">
-                  <span className="breakdown__name">{c.category}</span>
-                  <span className="breakdown__value amount">
-                    {formatPeso(c.total)} <span className="breakdown__share">({formatPercent(share)})</span>
-                  </span>
-                </div>
-                <div className="breakdown__track" aria-hidden="true">
-                  {c.total > 0 && (
-                    <div
-                      className="breakdown__bar"
-                      style={{ width: `${(c.total / largest) * 100}%`, background: CATEGORY_COLORS[c.category] }}
-                    />
-                  )}
-                </div>
-                {c.limit !== null && (
-                  <p className={`breakdown__limit${c.status === 'Exceeded' ? ' breakdown__limit--over' : ''}`}>
-                    Limit {formatPeso(c.limit)} ·{' '}
-                    {c.status === 'Exceeded'
-                      ? `over by ${formatPeso(c.total - c.limit)}`
-                      : `${formatPeso(c.limit - c.total)} left${c.status === 'Warning' ? ' (close to limit)' : ''}`}
-                  </p>
-                )}
-              </li>
-            )
-          })}
+          {rows.map((c) => (
+            <CategoryRow key={c.category} row={c} totalSpent={summary.totalSpent} />
+          ))}
         </ul>
       )}
     </section>
+  )
+}
+
+function CategoryRow({ row, totalSpent }) {
+  const hasLimit = row.limit !== null
+  const percent = hasLimit ? (row.total / row.limit) * 100 : totalSpent > 0 ? (row.total / totalSpent) * 100 : 0
+  const tone = row.status === 'Exceeded' ? 'danger' : row.status === 'Warning' ? 'warning' : 'ok'
+
+  let detail
+  if (!hasLimit) detail = `${formatPercent(percent)} of this month’s spending`
+  else if (row.status === 'Exceeded') detail = `Over by ${formatPeso(row.total - row.limit)}`
+  else detail = `${formatPeso(row.limit - row.total)} left`
+
+  return (
+    <li className={`breakdown__row breakdown__row--${tone}`}>
+      <CategoryIcon category={row.category} />
+      <div className="breakdown__body">
+        <div className="breakdown__line">
+          <span className="breakdown__name">{row.category}</span>
+          <span className="breakdown__amount">{formatPeso(row.total)}</span>
+        </div>
+        <div className="breakdown__track" aria-hidden="true">
+          {row.total > 0 && (
+            <span
+              className="breakdown__bar"
+              style={{ width: `${Math.min(percent, 100)}%`, '--cat': CATEGORY_COLORS[row.category] }}
+            />
+          )}
+        </div>
+        <div className="breakdown__line breakdown__meta">
+          <span className="breakdown__detail">
+            {tone !== 'ok' && <Icon name="alert" size={14} />}
+            {detail}
+            {row.status === 'Warning' && ' (close to limit)'}
+          </span>
+          {hasLimit && (
+            <span>
+              {formatPercent(percent)} of {formatPeso(row.limit)}
+            </span>
+          )}
+        </div>
+      </div>
+    </li>
   )
 }

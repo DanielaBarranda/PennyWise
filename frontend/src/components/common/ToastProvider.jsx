@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import Icon from './Icon.jsx'
 import { ToastContext } from '../../hooks/useToast.js'
 
 const DISMISS_AFTER_MS = 6000
+const TOAST_ICONS = { success: 'check', warning: 'alert', error: 'alert' }
 
 export default function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
@@ -34,9 +36,12 @@ export default function ToastProvider({ children }) {
       .filter((t) => types.includes(t.type))
       .map((t) => (
         <div key={t.id} className={`toast toast--${t.type}`}>
+          <span className="toast__icon" aria-hidden="true">
+            <Icon name={TOAST_ICONS[t.type]} size={16} />
+          </span>
           <span className="toast__message">{t.message}</span>
           <button type="button" className="toast__close" onClick={() => dismiss(t.id)} aria-label="Dismiss message">
-            ×
+            <Icon name="close" size={16} />
           </button>
         </div>
       ))

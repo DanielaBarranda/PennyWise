@@ -1,8 +1,9 @@
-import CategoryBadge from '../common/CategoryBadge.jsx'
+import { CategoryIcon } from '../common/CategoryBadge.jsx'
+import Icon from '../common/Icon.jsx'
 import { formatDate, formatPeso } from '../../utils/format.js'
 
 // A real <table> for screen readers; on small screens CSS turns each row into
-// a card, using data-label to show the column name beside each value.
+// a compact card.
 export default function ExpenseTable({ expenses, caption, onEdit, onDelete }) {
   return (
     <div className="table-wrap">
@@ -10,9 +11,8 @@ export default function ExpenseTable({ expenses, caption, onEdit, onDelete }) {
         <caption className="visually-hidden">{caption}</caption>
         <thead>
           <tr>
+            <th scope="col">Expense</th>
             <th scope="col">Date</th>
-            <th scope="col">Description</th>
-            <th scope="col">Category</th>
             <th scope="col" className="num">
               Amount
             </th>
@@ -24,32 +24,38 @@ export default function ExpenseTable({ expenses, caption, onEdit, onDelete }) {
         <tbody>
           {expenses.map((expense) => (
             <tr key={expense.id}>
-              <td data-label="Date">{formatDate(expense.expenseDate)}</td>
-              <td data-label="Description" className="expense-table__description">
-                {expense.description}
+              <td className="expense-table__expense">
+                {/* The flex layout lives on an inner element: a flex <td> stops behaving like a table cell. */}
+                <div className="expense-table__cell">
+                  <CategoryIcon category={expense.category} />
+                  <span className="expense-table__text">
+                    <span className="expense-table__description">{expense.description}</span>
+                    <span className="expense-table__category">{expense.category}</span>
+                    {/* Shown only on phones, where the Date column is hidden. */}
+                    <span className="expense-table__mobile-date">{formatDate(expense.expenseDate)}</span>
+                  </span>
+                </div>
               </td>
-              <td data-label="Category">
-                <CategoryBadge category={expense.category} />
-              </td>
-              <td data-label="Amount" className="num amount">
-                {formatPeso(expense.amount)}
-              </td>
+              <td className="expense-table__date">{formatDate(expense.expenseDate)}</td>
+              <td className="num expense-table__amount">{formatPeso(expense.amount)}</td>
               <td className="expense-table__actions">
                 <button
                   type="button"
-                  className="button button--small button--ghost"
+                  className="icon-button"
                   onClick={() => onEdit(expense)}
                   aria-label={`Edit ${expense.description}`}
+                  title="Edit"
                 >
-                  Edit
+                  <Icon name="pencil" />
                 </button>
                 <button
                   type="button"
-                  className="button button--small button--danger-ghost"
+                  className="icon-button icon-button--danger"
                   onClick={() => onDelete(expense)}
                   aria-label={`Delete ${expense.description}`}
+                  title="Delete"
                 >
-                  Delete
+                  <Icon name="trash" />
                 </button>
               </td>
             </tr>

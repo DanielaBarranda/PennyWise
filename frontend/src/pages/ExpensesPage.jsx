@@ -1,14 +1,15 @@
 import { useState } from 'react'
+import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import MonthPicker from '../components/common/MonthPicker.jsx'
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx'
 import { EmptyState, ErrorState, LoadingState } from '../components/common/States.jsx'
+import CategoryFilter from '../components/expenses/CategoryFilter.jsx'
 import ExpenseTable from '../components/expenses/ExpenseTable.jsx'
 import ExpenseFormModal from '../components/expenses/ExpenseFormModal.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
-import { CATEGORIES } from '../utils/constants.js'
 import { formatDate, formatMonth, formatPeso } from '../utils/format.js'
 
 export default function ExpensesPage({ month, onMonthChange }) {
@@ -43,56 +44,62 @@ export default function ExpensesPage({ month, onMonthChange }) {
 
   return (
     <>
-      <PageHeader title="Expenses" subtitle="Record, review and correct your spending">
+      <PageHeader
+        title="Expenses"
+        subtitle="Every expense you have recorded, by month."
+        controls={<MonthPicker month={month} onChange={onMonthChange} />}
+      >
         <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
+          <Icon name="plus" />
           Add expense
         </button>
       </PageHeader>
 
-      <div className="toolbar">
-        <MonthPicker month={month} onChange={onMonthChange} />
-        <div className="toolbar__filter">
-          <label htmlFor="category-filter">Category</label>
-          <select id="category-filter" value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="">All categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <section className="card" aria-labelledby="expenses-heading" aria-busy={loading}>
-        <div className="card__header">
+      <section className="card card--flush" aria-labelledby="expenses-heading" aria-busy={loading}>
+        <div className="card__header card__header--padded">
           <h2 id="expenses-heading">{filterLabel}</h2>
           {current?.length > 0 && (
             <p className="card__meta">
-              {current.length} {current.length === 1 ? 'expense' : 'expenses'} ·{' '}
-              <span className="amount">{formatPeso(current.reduce((sum, e) => sum + e.amount, 0))}</span>
+              {current.length} {current.length === 1 ? 'expense' : 'expenses'}, total{' '}
+              <strong className="amount">{formatPeso(current.reduce((sum, e) => sum + e.amount, 0))}</strong>
             </p>
           )}
         </div>
+        <div className="card__toolbar">
+          <CategoryFilter value={category} onChange={setCategory} />
+        </div>
 
         {error && !current ? (
-          <ErrorState error={error} onRetry={reload} />
+          <div className="card__body">
+            <ErrorState error={error} onRetry={reload} />
+          </div>
         ) : !current ? (
-          <LoadingState label="Loading expenses…" />
+          <div className="card__body">
+            <LoadingState label="Loading expenses…" variant="rows" />
+          </div>
         ) : current.length === 0 ? (
-          <EmptyState
-            title={`No ${category ? `${category} ` : ''}expenses in ${formatMonth(month)}`}
-            message={category ? 'Try another category, or show all categories.' : 'Add an expense to start tracking this month.'}
-            action={
-              category ? (
-                <button type="button" className="button button--secondary" onClick={() => setCategory('')}>
-                  Show all categories
-                </button>
-              ) : (
-                <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
-                  Add expense
-                </button>
-              )
-            }
-          />
+          <div className="card__body">
+            <EmptyState
+              title={`No ${category ? `${category} ` : ''}expenses in ${formatMonth(month)}`}
+              message={
+                category
+                  ? 'Try another category, or show every category.'
+                  : 'Record something you spent this month to start tracking.'
+              }
+              action={
+                category ? (
+                  <button type="button" className="button button--secondary" onClick={() => setCategory('')}>
+                    Show all categories
+                  </button>
+                ) : (
+                  <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
+                    <Icon name="plus" />
+                    Add expense
+                  </button>
+                )
+              }
+            />
+          </div>
         ) : (
           <ExpenseTable expenses={current} caption={filterLabel} onEdit={setEditing} onDelete={setDeleting} />
         )}
@@ -110,11 +117,12 @@ export default function ExpensesPage({ month, onMonthChange }) {
       />
       <ConfirmDialog
         open={deleting !== null}
-        title="Delete expense?"
+        title="Delete this expense?"
         message={
           deleting &&
-          `“${deleting.description}” (${formatPeso(deleting.amount)} on ${formatDate(deleting.expenseDate)}) will be permanently deleted.`
+          `“${deleting.description}” (${formatPeso(deleting.amount)} on ${formatDate(deleting.expenseDate)}) will be removed permanently. This can’t be undone.`
         }
+        confirmLabel="Delete expense"
         busy={deleteBusy}
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

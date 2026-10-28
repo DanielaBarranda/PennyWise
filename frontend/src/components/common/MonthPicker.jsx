@@ -1,3 +1,4 @@
+import Icon from './Icon.jsx'
 import { addMonths, currentMonth } from '../../utils/dates.js'
 import { formatMonth } from '../../utils/format.js'
 
@@ -8,18 +9,21 @@ export default function MonthPicker({ month, onChange }) {
 
   return (
     <div className="month-picker" role="group" aria-label="Selected month">
-      <button type="button" className="icon-button" onClick={() => onChange(addMonths(month, -1))} aria-label="Previous month">
-        ‹
-      </button>
-      <span className="month-picker__label" aria-live="polite">
-        {formatMonth(month)}
-      </span>
-      <button type="button" className="icon-button" onClick={() => onChange(addMonths(month, 1))} aria-label="Next month">
-        ›
-      </button>
+      <div className="month-picker__control">
+        <button type="button" className="month-picker__step" onClick={() => onChange(addMonths(month, -1))} aria-label="Previous month">
+          <Icon name="chevronLeft" />
+        </button>
+        <span className="month-picker__label" aria-live="polite">
+          <Icon name="calendar" size={16} />
+          {formatMonth(month)}
+        </span>
+        <button type="button" className="month-picker__step" onClick={() => onChange(addMonths(month, 1))} aria-label="Next month">
+          <Icon name="chevronRight" />
+        </button>
+      </div>
       {!isCurrent && (
         <button type="button" className="button button--link" onClick={() => onChange(currentMonth())}>
-          This month
+          Back to this month
         </button>
       )}
     </div>
