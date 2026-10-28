@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PennyWise.Api.Tests/PennyWise.Api.Tests.csproj" />
+  <Project Path="PennyWise.Api/PennyWise.Api.csproj" />
+</Solution>

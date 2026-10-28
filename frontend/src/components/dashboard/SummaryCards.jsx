@@ -26,7 +26,7 @@ export default function SummaryCards({ summary }) {
       <StatCard
         label={overBudget ? 'Over budget by' : 'Remaining'}
         value={hasBudget ? formatPeso(Math.abs(summary.remaining)) : '—'}
-        tone={overBudget ? 'danger' : 'positive'}
+        tone={!hasBudget ? 'default' : overBudget ? 'danger' : 'positive'}
       />
       <StatCard
         label="Budget spent"
