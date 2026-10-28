@@ -5,6 +5,15 @@ set -euo pipefail
 
 WEB=/var/www/pennywise
 CONF=/etc/nginx/conf.d/pennywise.conf
+CERT=/etc/letsencrypt/live/penny-wise.app/fullchain.pem
+
+# The HTTPS config needs the Let's Encrypt certificate. It is created once by hand
+# (see deploy/README.md, "HTTPS certificate"), then renewed automatically.
+if [ ! -f "$CERT" ]; then
+  echo "ERROR: no certificate at $CERT - follow 'HTTPS certificate' in deploy/README.md first."
+  exit 1
+fi
+install -d -m 755 /var/www/letsencrypt
 
 echo "Unpacking new website version..."
 rm -rf "$WEB.new"
@@ -33,9 +42,12 @@ systemctl reload nginx || systemctl start nginx
 rm -f /tmp/pennywise-web.tar.gz /tmp/pennywise.conf
 sleep 1 # "reload" returns before the new Nginx workers take over
 
-echo -n "Website (local):          "; curl -fs -o /dev/null -w "HTTP %{http_code}\n" http://localhost/
+# --resolve sends the request to this server while still using the real name,
+# so the certificate is checked exactly as a browser would check it.
+LOCAL=(--resolve penny-wise.app:443:127.0.0.1)
+echo -n "Website (local HTTPS):    "; curl -fs "${LOCAL[@]}" -o /dev/null -w "HTTP %{http_code}\n" https://penny-wise.app/
 echo -n "API via Nginx -> EC2 #2:  "
-if ! curl -fs http://localhost/api/health; then
+if ! curl -fs "${LOCAL[@]}" https://penny-wise.app/api/health; then
   echo "FAILED - Nginx could not reach the API on EC2 #2"
   exit 1
 fi

@@ -1,8 +1,8 @@
 # PennyWise deployment (AWS)
 
 ```
-Browser ──HTTP :80──▶ EC2 #1 pennywise-frontend   13.229.192.174 (Elastic IP)
-                        Nginx: React files + forwards /api/* ──┐
+Browser ──HTTPS :443──▶ EC2 #1 pennywise-frontend   https://penny-wise.app → 13.229.192.174 (Elastic IP)
+                        Nginx: TLS, React files + forwards /api/* ──┐
                                                                │ private network, port 5000
                       EC2 #2 pennywise-backend    172.31.32.247 (no public IP) ◀┘
                         systemd service pennywise-api (ASP.NET Core, .NET 10)
@@ -14,14 +14,14 @@ Region `ap-southeast-1` (Singapore). Both instances are `t4g.micro`, Amazon Linu
 
 | Security group | Inbound rules |
 |---|---|
-| `pennywise-frontend-sg` | TCP 80 from anywhere; TCP 22 from the owner's IP only |
+| `pennywise-frontend-sg` | TCP 443 and 80 from anywhere (80 only redirects to HTTPS); TCP 22 from the owner's IP only |
 | `pennywise-backend-sg` | TCP 5000 and TCP 22 from `pennywise-frontend-sg` only |
 
 ## Files in this folder
 | File | Goes to | Purpose |
 |---|---|---|
 | `deploy.sh` | runs on your PC | Builds both apps, uploads them, installs them, checks health |
-| `nginx/pennywise.conf` | EC2 #1 `/etc/nginx/conf.d/` | Serves React; proxies `/api/` to EC2 #2's private IP |
+| `nginx/pennywise.conf` | EC2 #1 `/etc/nginx/conf.d/` | HTTPS for penny-wise.app, HTTP→HTTPS redirect, serves React, proxies `/api/` to EC2 #2's private IP |
 | `systemd/pennywise-api.service` | EC2 #2 `/etc/systemd/system/` | Runs the API as user `pennywise`, restarts it on crash and at boot |
 | `remote/install-backend.sh` | runs on EC2 #2 | Backs up the DB, swaps in the new API, waits for `/api/health` |
 | `remote/install-frontend.sh` | runs on EC2 #1 | Validates the Nginx config, swaps in the new site, reloads Nginx |
@@ -44,7 +44,7 @@ ssh -F deploy/ssh_config pennywise-backend                     # log in to EC2 #
 ssh -F deploy/ssh_config pennywise-backend 'systemctl status pennywise-api'
 ssh -F deploy/ssh_config pennywise-backend 'sudo journalctl -u pennywise-api -n 50'
 ssh -F deploy/ssh_config pennywise-backend 'sudo systemctl restart pennywise-api'
-ssh -F deploy/ssh_config pennywise-frontend 'curl -s localhost/api/health'   # EC2 #1 -> EC2 #2
+ssh -F deploy/ssh_config pennywise-frontend 'curl -s http://172.31.32.247:5000/api/health'   # EC2 #1 -> EC2 #2
 ```
 
 ## Save credits: stop the servers when not in use
@@ -54,7 +54,36 @@ The data and the website address stay the same.
 aws ec2 stop-instances  --region ap-southeast-1 --instance-ids i-0b48c4651b306a9be i-0abf58fa6ba45b074
 aws ec2 start-instances --region ap-southeast-1 --instance-ids i-0b48c4651b306a9be i-0abf58fa6ba45b074
 ```
-After starting, wait about a minute, then open http://13.229.192.174.
+After starting, wait about a minute, then open https://penny-wise.app.
+
+## Domain and HTTPS certificate
+- **Domain:** `penny-wise.app`, registered free for one year at Name.com through the GitHub
+  Student Developer Pack (expires 28 Oct 2027, auto-renew **off**). Its DNS has two A records,
+  `penny-wise.app` and `www.penny-wise.app`, both pointing to the Elastic IP 13.229.192.174.
+- **Certificate:** free from Let's Encrypt, covering `penny-wise.app` and `www.penny-wise.app`.
+  It is valid for 90 days and renewed automatically by `certbot-renew.timer` (twice a day it
+  renews anything within 30 days of expiry, then reloads Nginx).
+- `.app` domains only work over HTTPS in browsers, so the site cannot be served without the
+  certificate.
+
+Check renewal:
+```bash
+ssh -F deploy/ssh_config pennywise-frontend 'systemctl list-timers certbot-renew.timer; sudo certbot certificates'
+ssh -F deploy/ssh_config pennywise-frontend 'sudo certbot renew --dry-run'   # waits up to 8 min on purpose
+```
+
+The certificate was created once on EC2 #1 (Nginx was already serving `/var/www/pennywise`,
+with `.well-known` linked to `/var/www/letsencrypt` for the first check):
+```bash
+sudo dnf -y install certbot
+sudo install -d -m 755 /var/www/letsencrypt/.well-known/acme-challenge
+sudo ln -sfn /var/www/letsencrypt/.well-known /var/www/pennywise/.well-known
+sudo certbot certonly --webroot -w /var/www/letsencrypt --cert-name penny-wise.app \
+  -d penny-wise.app -d www.penny-wise.app --agree-tos --register-unsafely-without-email \
+  --deploy-hook "systemctl reload nginx"
+sudo systemctl enable --now certbot-renew.timer
+```
+After that, `bash deploy/deploy.sh frontend` installs the HTTPS Nginx config.
 
 ## Backups
 Every backend deploy saves the database to `/var/lib/pennywise/backups/` (5 newest kept).

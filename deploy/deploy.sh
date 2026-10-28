@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 TARGET="${1:-all}"
 BUILD=build
-PUBLIC_URL="http://13.229.192.174"
+PUBLIC_URL="https://penny-wise.app"
 
 # Prefer Windows' built-in OpenSSH (it respects the key file's Windows permissions).
 if [ -x /c/Windows/System32/OpenSSH/ssh.exe ]; then
