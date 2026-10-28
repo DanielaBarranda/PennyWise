@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import ExpensesPage from './pages/ExpensesPage.jsx'
 import { useHashRoute } from './hooks/useHashRoute.js'
 import { useSidebarCollapsed } from './hooks/useSidebarCollapsed.js'
+import { useTheme } from './hooks/useTheme.js'
 import { currentMonth } from './utils/dates.js'
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
   // The selected month is shared, so switching pages keeps the same month.
   const [month, setMonth] = useState(currentMonth)
   const [collapsed, toggleSidebar] = useSidebarCollapsed()
+  const [theme, toggleTheme] = useTheme()
   const Page = route === 'expenses' ? ExpensesPage : DashboardPage
 
   return (
@@ -24,9 +26,9 @@ export default function App() {
         Skip to main content
       </a>
       <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
-        <Sidebar route={route} collapsed={collapsed} />
+        <Sidebar route={route} collapsed={collapsed} theme={theme} onToggleTheme={toggleTheme} />
         <div className="content">
-          <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} />
+          <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={toggleTheme} />
           <main id="main" className="main" tabIndex={-1}>
             <Page month={month} onMonthChange={setMonth} />
           </main>

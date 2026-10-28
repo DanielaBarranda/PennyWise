@@ -11,10 +11,11 @@ const STATUS_BADGE = {
   Exceeded: { text: 'Over limit', tone: 'danger' },
 }
 
-// One row per category with spending or a limit. With a limit, the bar shows how
-// much of that limit is used; without one, it shows the category's share of the
-// month's spending. Every bar value is also written out as text.
-export default function CategoryBreakdown({ summary }) {
+// Progress per category. With a limit, the bar shows how much of the limit is
+// used; without one, it shows the category's share of the month's spending.
+// Every value on a bar is also written out as text.
+// `headingRef` lets the summary card's "View details" button move focus here.
+export default function CategoryBreakdown({ summary, headingRef }) {
   const rows = summary.categories
     .filter((c) => c.total > 0 || c.limit !== null)
     .sort((a, b) => b.total - a.total)
@@ -22,13 +23,15 @@ export default function CategoryBreakdown({ summary }) {
   return (
     <section className="card" aria-labelledby="breakdown-heading">
       <div className="card__header">
-        <h2 id="breakdown-heading">Spending by category</h2>
+        <h2 id="breakdown-heading" ref={headingRef} tabIndex={-1}>
+          Category progress
+        </h2>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState compact title="Nothing spent yet" message="Each category’s total appears here once you add expenses." />
+        <EmptyState compact title="Nothing to track yet" message="Set category limits or add expenses to see progress here." />
       ) : (
-        <ul className="breakdown">
+        <ul className="progress-list">
           {rows.map((c) => (
             <CategoryRow key={c.category} row={c} totalSpent={summary.totalSpent} />
           ))}
@@ -44,17 +47,12 @@ function CategoryRow({ row, totalSpent }) {
   const badge = STATUS_BADGE[row.status]
   const tone = badge?.tone ?? 'ok'
 
-  let detail
-  if (!hasLimit) detail = 'No limit set'
-  else if (row.status === 'Exceeded') detail = `Over by ${formatPeso(row.total - row.limit)} of ${formatPeso(row.limit)}`
-  else detail = `${formatPeso(row.limit - row.total)} left of ${formatPeso(row.limit)}`
-
   return (
-    <li className={`breakdown__row breakdown__row--${tone}`}>
-      <CategoryIcon category={row.category} />
-      <div className="breakdown__body">
-        <div className="breakdown__line">
-          <span className="breakdown__name">
+    <li className={`progress-row progress-row--${tone}`}>
+      <CategoryIcon category={row.category} shape="round" />
+      <div className="progress-row__body">
+        <div className="progress-row__line">
+          <span className="progress-row__name">
             {row.category}
             {badge && (
               <span className={`status-badge status-badge--${badge.tone}`}>
@@ -63,21 +61,31 @@ function CategoryRow({ row, totalSpent }) {
               </span>
             )}
           </span>
-          <span className="breakdown__amount">{formatPeso(row.total)}</span>
+          <span className="progress-row__amounts">
+            {formatPeso(row.total)}
+            {hasLimit ? ` / ${formatPeso(row.limit)}` : ''}
+          </span>
         </div>
-        <div className="breakdown__track" aria-hidden="true">
+        <div className="progress-row__track" aria-hidden="true">
           {row.total > 0 && (
             <span
-              className="breakdown__bar"
+              className="progress-row__bar"
               style={{ width: `${Math.min(percent, 100)}%`, '--cat': CATEGORY_COLORS[row.category] }}
             />
           )}
         </div>
-        <div className="breakdown__line breakdown__meta">
-          <span>{detail}</span>
-          <span>{hasLimit ? `${formatPercent(percent)} used` : `${formatPercent(percent)} of spending`}</span>
-        </div>
+        <p className="progress-row__detail">
+          {!hasLimit
+            ? 'No limit set'
+            : row.status === 'Exceeded'
+              ? `Over by ${formatPeso(row.total - row.limit)}`
+              : `${formatPeso(row.limit - row.total)} left`}
+        </p>
       </div>
+      <span className="progress-row__percent">
+        {formatPercent(percent)}
+        <span className="visually-hidden">{hasLimit ? ' of the limit used' : ' of spending'}</span>
+      </span>
     </li>
   )
 }

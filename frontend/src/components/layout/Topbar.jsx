@@ -1,10 +1,12 @@
 import Icon from '../common/Icon.jsx'
+import ThemeToggle from './ThemeToggle.jsx'
 
 const today = () =>
   new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-// Slim bar above the page: the sidebar toggle, plus the app name and today's date.
-export default function Topbar({ collapsed, onToggleSidebar }) {
+// Slim bar above the page: sidebar toggle, app description, today's date and the
+// light/dark switch.
+export default function Topbar({ collapsed, onToggleSidebar, theme, onToggleTheme }) {
   return (
     <header className="topbar">
       <button
@@ -22,6 +24,7 @@ export default function Topbar({ collapsed, onToggleSidebar }) {
         <p className="topbar__title">Personal budget tracker</p>
         <p className="topbar__date">{today()}</p>
       </div>
+      <ThemeToggle theme={theme} onToggle={onToggleTheme} className="topbar__theme" />
     </header>
   )
 }

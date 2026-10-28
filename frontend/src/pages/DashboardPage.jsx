@@ -1,31 +1,47 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import MonthPicker from '../components/common/MonthPicker.jsx'
 import { ErrorState, LoadingState } from '../components/common/States.jsx'
-import BudgetOverview from '../components/dashboard/BudgetOverview.jsx'
-import BudgetAlerts from '../components/dashboard/BudgetAlerts.jsx'
+import SummaryCards from '../components/dashboard/SummaryCards.jsx'
+import SpendingOverview from '../components/dashboard/SpendingOverview.jsx'
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.jsx'
 import RecentTransactions from '../components/dashboard/RecentTransactions.jsx'
 import BudgetFormModal from '../components/dashboard/BudgetFormModal.jsx'
 import ExpenseFormModal from '../components/expenses/ExpenseFormModal.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { api } from '../services/api.js'
+import { formatMonth } from '../utils/format.js'
+
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export default function DashboardPage({ month, onMonthChange }) {
   const { data: summary, error, loading, reload } = useAsync(() => api.getDashboardSummary(month), [month])
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
+  const categoriesHeadingRef = useRef(null)
 
   // Ignore a summary that belongs to the previously selected month while the new one loads.
   const current = summary?.month === month ? summary : null
   const hasBudget = current?.budget != null
 
+  function showCategories() {
+    const heading = categoriesHeadingRef.current
+    heading?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    heading?.focus({ preventScroll: true })
+  }
+
   return (
     <>
       <PageHeader
-        title="Dashboard"
-        subtitle="Where your money went this month, and how much is left."
+        title={greeting()}
+        docTitle="Dashboard"
+        subtitle={`Here’s your financial overview for ${formatMonth(month)}.`}
         controls={<MonthPicker month={month} onChange={onMonthChange} />}
       >
         <button type="button" className="button button--secondary" onClick={() => setBudgetOpen(true)} disabled={!current}>
@@ -42,7 +58,7 @@ export default function DashboardPage({ month, onMonthChange }) {
         <ErrorState error={error} onRetry={reload} />
       ) : !current ? (
         <div className="dashboard">
-          <LoadingState label="Loading your dashboard…" variant="overview" />
+          <LoadingState label="Loading your dashboard…" variant="stats" />
           <div className="dashboard__columns">
             <LoadingState label="" variant="card" />
             <LoadingState label="" variant="card" />
@@ -51,12 +67,12 @@ export default function DashboardPage({ month, onMonthChange }) {
       ) : (
         <div className="dashboard" aria-busy={loading}>
           {error && <ErrorState error={error} onRetry={reload} />}
-          <BudgetOverview summary={current} onSetBudget={() => setBudgetOpen(true)} />
-          {hasBudget && <BudgetAlerts summary={current} />}
+          <SummaryCards summary={current} onSetBudget={() => setBudgetOpen(true)} onShowCategories={showCategories} />
           <div className="dashboard__columns">
-            <CategoryBreakdown summary={current} />
-            <RecentTransactions expenses={current.recentExpenses} onAdd={() => setExpenseOpen(true)} />
+            <SpendingOverview summary={current} />
+            <CategoryBreakdown summary={current} headingRef={categoriesHeadingRef} />
           </div>
+          <RecentTransactions expenses={current.recentExpenses} onAdd={() => setExpenseOpen(true)} />
         </div>
       )}
 

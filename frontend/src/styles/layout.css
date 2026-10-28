@@ -27,9 +27,10 @@
   flex-direction: column;
   gap: 20px;
   padding: 18px 16px;
-  background: var(--charcoal);
-  color: var(--on-dark-muted);
-  --focus: var(--gold);
+  background: var(--side-bg);
+  border-right: 1px solid var(--side-line);
+  color: var(--side-text);
+  --focus: var(--side-focus);
 }
 
 .brand {
@@ -39,7 +40,7 @@
   min-height: 44px;
   padding: 2px 4px;
   border-radius: var(--r-md);
-  color: var(--on-dark);
+  color: var(--side-text-strong);
   text-decoration: none;
 }
 
@@ -65,18 +66,18 @@
 }
 
 .brand__tagline {
-  color: var(--on-dark-muted);
+  color: var(--side-text);
   font-size: var(--fs-xs);
 }
 
 .nav {
   padding-top: 16px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--side-line);
 }
 
 .nav__heading {
   margin: 0 0 8px 12px;
-  color: var(--on-dark-muted);
+  color: var(--side-text);
   font-size: var(--fs-xs);
   font-weight: 500;
 }
@@ -98,7 +99,7 @@
   min-height: 44px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  color: var(--on-dark-muted);
+  color: var(--side-text);
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
@@ -106,13 +107,14 @@
 }
 
 .nav__link:hover {
-  background: var(--charcoal-2);
-  color: var(--on-dark);
+  background: var(--side-hover);
+  color: var(--side-text-strong);
 }
 
 .nav__link[aria-current='page'] {
-  background: var(--burgundy);
-  color: #fff;
+  background: var(--side-active);
+  box-shadow: var(--side-active-ring);
+  color: var(--side-text-strong);
   font-weight: 600;
 }
 
@@ -177,8 +179,8 @@
     transform: translateY(-50%);
     padding: 6px 10px;
     border-radius: var(--r-sm);
-    background: var(--charcoal-3);
-    color: #fff;
+    background: var(--tooltip-bg);
+    color: var(--side-text-strong);
     font-size: var(--fs-sm);
     font-weight: 500;
     box-shadow: var(--shadow-pop);
@@ -197,8 +199,24 @@
   min-height: 60px;
   padding: 8px clamp(16px, 4vw, 52px) 8px 20px;
   border-bottom: 1px solid var(--line);
-  background: rgb(247 244 239 / 92%);
-  backdrop-filter: blur(6px);
+  background: var(--topbar-bg);
+  backdrop-filter: blur(8px);
+}
+
+.topbar__theme {
+  margin-left: auto;
+}
+
+/* The sidebar's copy of the theme switch is only for tablets and phones,
+   where the top bar is hidden. */
+.sidebar .sidebar__theme {
+  display: none;
+  color: var(--side-text);
+}
+
+.sidebar .sidebar__theme:hover {
+  background: var(--side-hover);
+  color: var(--side-text-strong);
 }
 
 .topbar__title {
@@ -285,7 +303,7 @@
 @media (max-width: 860px) {
   .app-shell,
   .app-shell--collapsed {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     /* Only the content row grows; the top bar keeps its natural height. */
     grid-template-rows: auto 1fr;
   }
@@ -303,6 +321,14 @@
   .nav__heading,
   .topbar {
     display: none;
+  }
+
+  .sidebar .sidebar__theme {
+    display: inline-grid;
+  }
+
+  .nav {
+    margin-left: auto;
   }
 
   .nav {

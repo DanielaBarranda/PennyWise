@@ -1,4 +1,5 @@
 import Icon from '../common/Icon.jsx'
+import ThemeToggle from './ThemeToggle.jsx'
 
 const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -8,7 +9,7 @@ const NAV_ITEMS = [
 // Expanded: emblem, name and tagline, then labelled links.
 // Collapsed: a narrow icon rail; each link keeps its text for screen readers
 // and shows it as a tooltip on hover or keyboard focus.
-export default function Sidebar({ route, collapsed }) {
+export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
   return (
     <aside id="sidebar" className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <a href="#/dashboard" className="brand" aria-label="PennyWise home">
@@ -41,6 +42,9 @@ export default function Sidebar({ route, collapsed }) {
           ))}
         </ul>
       </nav>
+
+      {/* On tablets and phones the top bar is hidden, so the theme switch lives here. */}
+      <ThemeToggle theme={theme} onToggle={onToggleTheme} className="sidebar__theme" />
     </aside>
   )
 }

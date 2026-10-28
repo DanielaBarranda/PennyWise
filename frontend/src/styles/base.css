@@ -1,53 +1,23 @@
 /* PennyWise design tokens.
-   Text colors are checked for at least 4.5:1 contrast on the surfaces they sit on.
-   Gold (#d8ad42) is only used on dark surfaces; on light surfaces gold text uses --gold-ink. */
+   Two themes share one set of variable names, so components never need to know
+   which theme is active. Dark is the default; [data-theme] is set on <html> by
+   index.html (before the first paint) and by hooks/useTheme.js.
+   Text colors are checked for at least 4.5:1 contrast on the surfaces they sit on. */
 :root {
-  /* Brand */
+  /* Brand constants (same in both themes) */
   --charcoal: #171719;
-  --charcoal-2: #212024;
-  --charcoal-3: #2c2a2f;
   --burgundy: #671824;
-  --burgundy-hover: #561420;
-  --burgundy-deep: #3f0e17;
   --crimson: #d93645;
   --gold: #d8ad42;
-  --gold-soft: #f2dfa8;
-  --gold-ink: #7a5a0c;
-
-  /* Neutrals */
-  --paper: #f7f4ef;
-  --surface: #ffffff;
-  --surface-sunk: #f2eee7;
-  --line: #e7e0d6;
-  --line-strong: #cfc5b8;
-  --text: #1c1a1d;
-  --muted: #5f5852;
-  --on-dark: #f6f1ea;
-  --on-dark-muted: #c9bfb4;
-
-  /* Status */
-  --success: #1d7348;
-  --success-bg: #e4f2ea;
-  --warning: #855600;
-  --warning-bg: #fcefd2;
-  --warning-bar: #d99a1b;
-  --danger: #b42318;
-  --danger-bg: #fce8e6;
 
   /* Shape: larger radius = more important surface */
   --r-sm: 8px;
   --r-md: 12px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  --r-lg: 16px;
+  --r-xl: 20px;
   --r-pill: 999px;
 
-  --shadow-card: 0 1px 2px rgb(28 26 29 / 5%);
-  --shadow-raised: 0 10px 30px -14px rgb(63 14 23 / 45%);
-  --shadow-pop: 0 24px 60px -20px rgb(23 23 25 / 45%);
-
-  --focus: var(--crimson);
-
-  /* Type scale: two small sizes only, both readable (13px and 14px at default zoom). */
+  /* Type scale: two small sizes only (13px and 14px at default zoom). */
   --fs-xs: 0.8125rem;
   --fs-sm: 0.875rem;
 
@@ -55,8 +25,156 @@
   --font-body: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
 
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
 
+/* ---------- Light theme ---------- */
+:root,
+[data-theme='light'] {
   color-scheme: light;
+
+  --bg: #f7f4ef;
+  --bg-glow: none;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #fbf9f6;
+  --surface-sunk: #f2eee7;
+  --line: #e7e0d6;
+  --line-strong: #cfc5b8;
+  --line-hover: #a59a8c;
+  --text: #1c1a1d;
+  --muted: #5f5852;
+
+  --primary: #671824;
+  --primary-hover: #561420;
+  --on-primary: #ffffff;
+  --link: #671824;
+  --focus: #d93645;
+  --gold-ink: #7a5a0c;
+
+  --selected-bg: #fbf3f4;
+  --selected-line: #671824;
+  --invalid-bg: #fffafa;
+  --chip-on-bg: #171719;
+  --chip-on-text: #ffffff;
+  --topbar-bg: rgb(247 244 239 / 92%);
+  --backdrop: rgb(23 23 25 / 55%);
+  --skeleton-a: #f2eee7;
+  --skeleton-b: #faf7f2;
+  --coin-bg: #f2dfa8;
+  --coin-ring: #fff7df;
+
+  --success: #1d7348;
+  --success-bg: #e4f2ea;
+  --warning: #855600;
+  --warning-bg: #fcefd2;
+  --warning-line: #efd391;
+  --warning-bar: #d99a1b;
+  --danger: #b42318;
+  --danger-hover: #951c13;
+  --danger-bg: #fce8e6;
+  --danger-line: #f3c1bb;
+  /* Solid red buttons keep white text readable (4.5:1) in both themes. */
+  --danger-solid: #b42318;
+  --danger-solid-hover: #951c13;
+  --toast-icon-text: #ffffff;
+  --side-active-ring: none;
+
+  /* Sidebar stays charcoal in both themes. */
+  --side-bg: #171719;
+  --side-hover: #212024;
+  --side-line: rgb(255 255 255 / 8%);
+  --side-text: #c9bfb4;
+  --side-text-strong: #f6f1ea;
+  --side-active: #671824;
+  --side-focus: #d8ad42;
+  --tooltip-bg: #2c2a2f;
+  --toast-bg: #171719;
+  --toast-text: #f6f1ea;
+  --toast-muted: #c9bfb4;
+
+  --cat-food: #c0532f;
+  --cat-transportation: #b45f06;
+  --cat-school: #3a63b8;
+  --cat-bills: #1d7a4a;
+  --cat-entertainment: #7b4fc4;
+  --cat-others: #56635d;
+
+  --shadow-card: 0 1px 2px rgb(28 26 29 / 5%);
+  --shadow-pop: 0 24px 60px -20px rgb(23 23 25 / 45%);
+}
+
+/* ---------- Dark theme (default) ---------- */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0d0b0d;
+  /* A faint red glow in one corner gives the dark page depth without decoration. */
+  --bg-glow: radial-gradient(1100px 520px at 100% -10%, rgb(150 22 40 / 20%), transparent 65%);
+  --surface: #161215;
+  --surface-raised: #1c171b;
+  --surface-hover: #1c171b;
+  --surface-sunk: #261f24;
+  --line: #2e2529;
+  --line-strong: #43383e;
+  --line-hover: #6a5a62;
+  --text: #f3ede8;
+  --muted: #b2a7a1;
+
+  --primary: #c62f3e;
+  --primary-hover: #ad2532;
+  --on-primary: #ffffff;
+  --link: #ff7b86;
+  --focus: #ff6b78;
+  --gold-ink: #e3bd5c;
+
+  --selected-bg: rgb(198 47 62 / 14%);
+  --selected-line: #e04a58;
+  --invalid-bg: rgb(255 107 118 / 6%);
+  --chip-on-bg: #f3ede8;
+  --chip-on-text: #161215;
+  --topbar-bg: rgb(13 11 13 / 78%);
+  --backdrop: rgb(0 0 0 / 65%);
+  --skeleton-a: #1c171b;
+  --skeleton-b: #261f24;
+  --coin-bg: rgb(216 173 66 / 14%);
+  --coin-ring: transparent;
+
+  --success: #4cc38a;
+  --success-bg: rgb(76 195 138 / 13%);
+  --warning: #f2b544;
+  --warning-bg: rgb(242 181 68 / 12%);
+  --warning-line: rgb(242 181 68 / 32%);
+  --warning-bar: #f2b544;
+  --danger: #ff6b76;
+  --danger-hover: #ff8590;
+  --danger-bg: rgb(255 107 118 / 12%);
+  --danger-line: rgb(255 107 118 / 32%);
+  --danger-solid: #c62f3e;
+  --danger-solid-hover: #ad2532;
+  --toast-icon-text: #161215;
+  --side-active-ring: inset 0 0 0 1px rgb(224 74 88 / 45%);
+
+  --side-bg: #120e11;
+  --side-hover: #1d171b;
+  --side-line: rgb(255 255 255 / 7%);
+  --side-text: #b9aea8;
+  --side-text-strong: #f6f1ea;
+  --side-active: rgb(198 47 62 / 22%);
+  --side-focus: #d8ad42;
+  --tooltip-bg: #2c2328;
+  --toast-bg: #241d21;
+  --toast-text: #f6f1ea;
+  --toast-muted: #b9aea8;
+
+  --cat-food: #f0645a;
+  --cat-transportation: #f59e42;
+  --cat-school: #5b9df5;
+  --cat-bills: #3fbf7f;
+  --cat-entertainment: #a77bf3;
+  --cat-others: #9a979c;
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 10px 30px -18px rgb(0 0 0 / 70%);
+  --shadow-pop: 0 30px 70px -20px rgb(0 0 0 / 80%);
 }
 
 *,
@@ -76,7 +194,8 @@ body {
   font-size: 1rem;
   line-height: 1.5;
   color: var(--text);
-  background: var(--paper);
+  background: var(--bg-glow), var(--bg);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -105,7 +224,7 @@ h2 {
 }
 
 a {
-  color: var(--burgundy);
+  color: var(--link);
 }
 
 button,
@@ -131,6 +250,7 @@ img {
 
 /* Headings and <main> receive focus from code only; no ring needed there. */
 h1:focus,
+h2:focus,
 main:focus {
   outline: none;
 }
@@ -165,7 +285,7 @@ main:focus {
   padding: 10px 16px;
   border-radius: var(--r-sm);
   background: var(--surface);
-  color: var(--burgundy);
+  color: var(--link);
   font-weight: 600;
   transform: translateY(-150%);
 }
@@ -181,5 +301,6 @@ main:focus {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

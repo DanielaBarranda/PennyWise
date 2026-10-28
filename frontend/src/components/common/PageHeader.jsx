@@ -4,13 +4,14 @@ import { useEffect, useRef } from 'react'
 // changes, so users hear where they are instead of staying on the old link.
 // `controls` (e.g. the month picker) sits apart from the action buttons so
 // navigating the data and changing it never look alike.
-export default function PageHeader({ title, subtitle, controls, children }) {
+// `docTitle` names the browser tab when the visible heading is a greeting.
+export default function PageHeader({ title, docTitle, subtitle, controls, children }) {
   const headingRef = useRef(null)
 
   useEffect(() => {
-    document.title = `${title} · PennyWise`
+    document.title = `${docTitle ?? title} · PennyWise`
     headingRef.current?.focus()
-  }, [title])
+  }, [title, docTitle])
 
   return (
     <div className="page-header">
