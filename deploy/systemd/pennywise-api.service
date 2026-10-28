@@ -1,0 +1,42 @@
+# PennyWise Web API - systemd service on EC2 #2 (backend)
+# Installed to /etc/systemd/system/pennywise-api.service by deploy/deploy.sh
+#
+# systemd starts the API at boot, restarts it if it crashes, and sends its
+# logs to the journal:  sudo journalctl -u pennywise-api -f
+
+[Unit]
+Description=PennyWise ASP.NET Core Web API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=pennywise
+Group=pennywise
+WorkingDirectory=/opt/pennywise/api
+ExecStart=/opt/pennywise/api/PennyWise.Api
+
+# Production settings: loads appsettings.Production.json, so the database is
+# /var/lib/pennywise/pennywise.db. Listens on all interfaces, but the security
+# group only lets the frontend instance reach port 5000.
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
+# Workstation garbage collection uses far less memory on this 1 GB instance.
+Environment=DOTNET_gcServer=0
+Environment=DOTNET_NOLOGO=1
+
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=20
+SyslogIdentifier=pennywise-api
+
+# Hardening: the API runs as an unprivileged user and can only write to its data folder.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/pennywise
+
+[Install]
+WantedBy=multi-user.target

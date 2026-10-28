@@ -4,6 +4,7 @@ dist/
 bin/
 obj/
 publish/
+build/
 
 # Local databases (real data lives on the server, never in Git)
 *.db

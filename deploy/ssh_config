@@ -1,0 +1,22 @@
+# SSH settings for the PennyWise EC2 instances. Contains no secrets: the private
+# key stays at ~/.ssh/pennywise-key.pem on your own computer.
+#
+#   ssh -F deploy/ssh_config pennywise-frontend
+#   ssh -F deploy/ssh_config pennywise-backend    (goes through the frontend)
+
+Host pennywise-frontend
+    HostName 13.229.192.174
+    User ec2-user
+    IdentityFile ~/.ssh/pennywise-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
+
+# The backend has no public IP, so SSH "jumps" through the frontend over the
+# private network. Its security group only allows SSH from the frontend.
+Host pennywise-backend
+    HostName 172.31.32.247
+    User ec2-user
+    IdentityFile ~/.ssh/pennywise-key.pem
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
+    ProxyJump pennywise-frontend
