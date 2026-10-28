@@ -5,17 +5,22 @@ const NAV_ITEMS = [
   { route: 'expenses', label: 'Expenses', icon: 'receipt' },
 ]
 
-export default function Sidebar({ route }) {
+// Expanded: emblem, name and tagline, then labelled links.
+// Collapsed: a narrow icon rail; each link keeps its text for screen readers
+// and shows it as a tooltip on hover or keyboard focus.
+export default function Sidebar({ route, collapsed }) {
   return (
-    <aside className="sidebar">
+    <aside id="sidebar" className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <a href="#/dashboard" className="brand" aria-label="PennyWise home">
-        {/* Full logo on wide screens; the emblem plus a text wordmark on small ones. */}
-        <img className="brand__logo" src="/brand/pennywise-logo.png" alt="PennyWise. Track, plan, grow." width="180" height="193" />
-        <img className="brand__emblem" src="/brand/pennywise-emblem.png" alt="" width="44" height="41" />
-        <span className="brand__wordmark">PennyWise</span>
+        <img className="brand__emblem" src="/brand/pennywise-emblem.png" alt="" width="40" height="37" />
+        <span className="brand__text">
+          <span className="brand__name">PennyWise</span>
+          <span className="brand__tagline">Track • Plan • Grow</span>
+        </span>
       </a>
 
       <nav className="nav" aria-label="Main">
+        <p className="nav__heading">Menu</p>
         <ul>
           {NAV_ITEMS.map((item) => (
             <li key={item.route}>
@@ -25,7 +30,12 @@ export default function Sidebar({ route }) {
                 aria-current={route === item.route ? 'page' : undefined}
               >
                 <Icon name={item.icon} size={20} />
-                {item.label}
+                <span className="nav__label">{item.label}</span>
+                {/* Visual-only copy of the label for the collapsed rail; hidden from
+                    screen readers so the link name is not read twice. */}
+                <span className="nav__tooltip" aria-hidden="true">
+                  {item.label}
+                </span>
               </a>
             </li>
           ))}
