@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PennyWise.Api.Auth;
 using PennyWise.Api.Data;
 using PennyWise.Api.DTOs;
 using PennyWise.Api.Errors;
@@ -6,11 +7,13 @@ using PennyWise.Api.Models;
 
 namespace PennyWise.Api.Services;
 
-public class BudgetService(PennyWiseDbContext db, AppClock clock)
+// Every query is limited to the signed-in user's budgets (see ExpenseService).
+public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser)
 {
     public async Task<List<BudgetResponse>> ListAsync(string? month)
     {
-        var query = db.Budgets.AsNoTracking().Include(b => b.CategoryLimits).AsQueryable();
+        var userId = currentUser.Id;
+        var query = db.Budgets.AsNoTracking().Include(b => b.CategoryLimits).Where(b => b.UserId == userId);
         if (month is not null) query = query.Where(b => b.Month == month);
 
         var budgets = await query.OrderByDescending(b => b.Month).ToListAsync();
@@ -24,7 +27,7 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock)
     {
         await EnsureMonthIsFreeAsync(request.Month!, exceptBudgetId: null);
 
-        var budget = new Budget { Month = request.Month!, CreatedAt = clock.UtcNow };
+        var budget = new Budget { UserId = currentUser.Id, Month = request.Month!, CreatedAt = clock.UtcNow };
         Apply(budget, request);
         db.Budgets.Add(budget);
         await SaveAsync(budget.Month);
@@ -42,13 +45,17 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock)
         return BudgetResponse.From(budget);
     }
 
-    private async Task<Budget> FindAsync(int id) =>
-        await db.Budgets.Include(b => b.CategoryLimits).FirstOrDefaultAsync(b => b.Id == id)
-        ?? throw new NotFoundException($"Budget {id} was not found.");
+    private async Task<Budget> FindAsync(int id)
+    {
+        var userId = currentUser.Id;
+        return await db.Budgets.Include(b => b.CategoryLimits).FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId)
+            ?? throw new NotFoundException($"Budget {id} was not found.");
+    }
 
     private async Task EnsureMonthIsFreeAsync(string month, int? exceptBudgetId)
     {
-        if (await db.Budgets.AnyAsync(b => b.Month == month && b.Id != exceptBudgetId))
+        var userId = currentUser.Id;
+        if (await db.Budgets.AnyAsync(b => b.UserId == userId && b.Month == month && b.Id != exceptBudgetId))
         {
             throw new ConflictException($"A budget for {month} already exists. Edit that budget instead.");
         }

@@ -151,7 +151,7 @@ public class ExpensesApiTests : ApiTestBase
         await CreateBudgetAsync("2026-10", 5000);
         await CreateExpenseAsync(1234.56m, "School", "2026-10-15", "Thesis printing");
 
-        RestartApi();
+        await RestartApiAsync();
 
         var summary = await GetSummaryAsync("2026-10");
         Assert.True(File.Exists(DatabasePath));

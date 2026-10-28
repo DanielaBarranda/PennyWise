@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 
-// A tiny router: "#/dashboard" and "#/expenses". Two pages do not justify a
-// routing library, and hash URLs work behind Nginx without extra rewrite rules.
-export const ROUTES = ['dashboard', 'expenses']
+// A tiny router: "#/dashboard", "#/expenses", "#/login" and "#/register". A few pages
+// do not justify a routing library, and hash URLs work behind Nginx without
+// extra rewrite rules. Which pages a visitor may see is decided in App.jsx.
+export const ROUTES = ['dashboard', 'expenses', 'login', 'register']
 
 function readRoute() {
   const route = window.location.hash.replace(/^#\/?/, '')

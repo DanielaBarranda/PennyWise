@@ -4,6 +4,11 @@ public class Expense
 {
     public int Id { get; set; }
 
+    // The account that owns this record. Null only for records created before
+    // accounts existed; those stay hidden until claimed by the configured owner
+    // (see Auth/LegacyDataClaimer.cs).
+    public int? UserId { get; set; }
+
     // decimal, never double: 0.1 + 0.2 must equal exactly 0.3 when adding money.
     public decimal Amount { get; set; }
 

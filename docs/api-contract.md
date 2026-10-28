@@ -30,9 +30,36 @@ Errors use ASP.NET Core's standard **ProblemDetails** format:
 | Status | When |
 |---|---|
 | 400 | Validation failed (`errors` lists each field) |
-| 404 | The id does not exist |
-| 409 | A budget already exists for that month |
+| 401 | Not signed in, or the session has ended |
+| 403 | A data-changing request without the `X-PennyWise-Client` header |
+| 404 | The id does not exist, **or belongs to another user** (the two look identical on purpose) |
+| 409 | A budget already exists for that month, or the email is already registered |
+| 429 | Too many sign-in attempts (per IP per minute), or the account is locked after 5 wrong passwords |
 | 500 | Unexpected error. The response has a generic message only, with no stack trace |
+
+## Accounts and sign-in
+
+Every endpoint below requires a signed-in user, except `POST /api/auth/register`,
+`POST /api/auth/login`, `POST /api/auth/logout` and `GET /api/health`.
+
+- **Session:** signing in sets the cookie `pennywise_session` (HttpOnly, SameSite=Strict,
+  Secure in production, 7 days, renewed while in use). The browser sends it automatically;
+  JavaScript cannot read it.
+- **Ownership:** budgets and expenses belong to the signed-in user. The user is taken from
+  the cookie on the server, never from the request; a `userId` sent in a body is ignored.
+- **CSRF protection:** `POST`, `PUT` and `DELETE` requests must include the header
+  `X-PennyWise-Client: web` (the web app always sends it).
+
+| Method | Route | Body | Success |
+|---|---|---|---|
+| POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `{ id, name, email }`, signed in |
+| POST | `/api/auth/login` | `{ email, password }` | 200 `{ id, name, email }`, signed in |
+| POST | `/api/auth/logout` | | 204, cookie removed |
+| GET | `/api/auth/me` | | 200 `{ id, name, email }`, or 401 |
+
+Rules: name 1–80 characters; a valid email up to 254 characters, unique ignoring case and
+spaces; password 8–128 characters with at least one letter and one number; a wrong email
+and a wrong password both return the same 401 message. Password hashes are never returned.
 
 ## Objects
 

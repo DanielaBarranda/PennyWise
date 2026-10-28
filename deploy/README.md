@@ -85,6 +85,26 @@ sudo systemctl enable --now certbot-renew.timer
 ```
 After that, `bash deploy/deploy.sh frontend` installs the HTTPS Nginx config.
 
+## Accounts and sign-in (production settings)
+- **Session cookie** `pennywise_session`: HttpOnly, SameSite=Strict, Secure (HTTPS only in
+  production). Nginx and the API share one origin (`https://penny-wise.app`), so no CORS is
+  configured, on purpose.
+- **Cookie keys** are stored in `/var/lib/pennywise/keys/` on EC2 #2 (set by
+  `appsettings.Production.json`), so restarts and deploys do not sign everyone out.
+  They are part of the data folder; keep them private.
+- **Client IP for rate limiting:** the API trusts `X-Forwarded-For` only from the frontend's
+  private IP (`TrustedProxies` in `appsettings.Production.json`).
+- **Private settings** go in `/etc/pennywise/api.env` on EC2 #2 (never in Git), one
+  `KEY=value` per line, read by the systemd service. Currently used for:
+  ```
+  PennyWise__LegacyOwnerEmail=owner@example.com
+  ```
+  Budgets and expenses created before accounts existed have no owner and are hidden from
+  everyone. The first time an account with this email registers or logs in, they are
+  assigned to it. Without the setting nothing is assigned; nothing is ever deleted.
+- **Password reset by email is not available**: the servers cannot send email (that would
+  need Amazon SES or another mail service).
+
 ## Backups
 Every backend deploy saves the database to `/var/lib/pennywise/backups/` (5 newest kept).
 To copy the live database to your PC:

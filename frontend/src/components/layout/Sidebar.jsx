@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from '../common/Icon.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
+import UserMenu from './UserMenu.jsx'
 
 const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -113,6 +114,7 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
         <nav className="drawer__nav" aria-label="Main">
           <NavLinks route={route} onNavigate={() => setMenuOpen(false)} />
         </nav>
+        <UserMenu variant="panel" />
       </dialog>
     </aside>
   )

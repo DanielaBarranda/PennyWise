@@ -5,7 +5,21 @@
 // the ASP.NET Core API; on AWS, Nginx on EC2 #1 proxies it to EC2 #2's private
 // IP. VITE_API_BASE_URL exists only as an override and must never hold secrets,
 // because Vite copies VITE_* values into the JavaScript the browser downloads.
+//
+// Signing in sets an HttpOnly cookie that the browser sends with every request
+// to the same site; this code never sees or stores the session itself.
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+
+// The API refuses data changes without this header (CSRF protection; see
+// ClientHeaderMiddleware.cs). Other websites cannot add it to their requests.
+const CLIENT_HEADER = { 'X-PennyWise-Client': 'web' }
+
+// Called when the session has ended (signed out elsewhere, expired cookie), so
+// the app can show the login page. Set by the AuthProvider.
+let onSessionEnded = () => {}
+export function setSessionEndedHandler(handler) {
+  onSessionEnded = handler
+}
 
 export class ApiError extends Error {
   constructor(message, status, fieldErrors = {}) {
@@ -29,7 +43,8 @@ async function request(path, { method = 'GET', body, query } = {}) {
   try {
     response = await fetch(url, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: body ? { ...CLIENT_HEADER, 'Content-Type': 'application/json' } : CLIENT_HEADER,
+      credentials: 'same-origin',
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -40,6 +55,8 @@ async function request(path, { method = 'GET', body, query } = {}) {
 
   const isJson = response.headers.get('content-type')?.includes('json')
   const data = isJson ? await response.json().catch(() => null) : null
+
+  if (response.status === 401 && !path.startsWith('/auth/')) onSessionEnded()
 
   if (!response.ok) {
     // A non-JSON error usually comes from the proxy (Vite or Nginx), not the API,
@@ -68,6 +85,11 @@ function normalizeFieldErrors(errors) {
 }
 
 export const api = {
+  me: () => request('/auth/me'),
+  register: (form) => request('/auth/register', { method: 'POST', body: form }),
+  login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+
   getDashboardSummary: (month) => request('/dashboard/summary', { query: { month } }),
 
   getBudgets: (month) => request('/budgets', { query: { month } }),

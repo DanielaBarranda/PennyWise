@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PennyWise.Api.Auth;
 using PennyWise.Api.Data;
 using PennyWise.Api.DTOs;
 using PennyWise.Api.Models;
@@ -8,7 +9,8 @@ namespace PennyWise.Api.Services;
 
 // Calculates every dashboard number on the server from the database, so the
 // frontend only displays values; it never invents totals of its own.
-public class DashboardService(PennyWiseDbContext db)
+// Only the signed-in user's budget and expenses are counted.
+public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
 {
     // Must match WARNING_PERCENT in frontend/src/utils/constants.js.
     public const decimal WarningPercent = 80m;
@@ -17,16 +19,17 @@ public class DashboardService(PennyWiseDbContext db)
     public async Task<DashboardSummaryResponse> GetSummaryAsync(string month)
     {
         var (first, last) = MonthKey.Range(month);
+        var userId = currentUser.Id;
 
         var budget = await db.Budgets.AsNoTracking()
             .Include(b => b.CategoryLimits)
-            .FirstOrDefaultAsync(b => b.Month == month);
+            .FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
 
         // SQLite cannot SUM decimal columns exactly, so the month's expenses are
         // loaded and added up in C# with decimal arithmetic. One person's month
         // of expenses is small, so this is fast.
         var expenses = await db.Expenses.AsNoTracking()
-            .Where(e => e.ExpenseDate >= first && e.ExpenseDate <= last)
+            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .ToListAsync();
 
         var totalSpent = expenses.Sum(e => e.Amount);

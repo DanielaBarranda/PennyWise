@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PennyWise.Api.Auth;
 using PennyWise.Api.Data;
 using PennyWise.Api.DTOs;
 using PennyWise.Api.Errors;
@@ -8,11 +9,14 @@ using PennyWise.Api.Validation;
 namespace PennyWise.Api.Services;
 
 // Business logic for expenses. Controllers handle HTTP; this class handles data.
-public class ExpenseService(PennyWiseDbContext db, AppClock clock)
+// Every query is limited to the signed-in user's expenses: someone else's expense
+// behaves exactly like one that does not exist (404), whatever id is requested.
+public class ExpenseService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser)
 {
     public async Task<List<ExpenseResponse>> ListAsync(string? month, Category? category)
     {
-        var query = db.Expenses.AsNoTracking();
+        var userId = currentUser.Id;
+        var query = db.Expenses.AsNoTracking().Where(e => e.UserId == userId);
 
         if (month is not null)
         {
@@ -38,7 +42,7 @@ public class ExpenseService(PennyWiseDbContext db, AppClock clock)
 
     public async Task<ExpenseResponse> CreateAsync(ExpenseRequest request)
     {
-        var expense = new Expense { CreatedAt = clock.UtcNow };
+        var expense = new Expense { UserId = currentUser.Id, CreatedAt = clock.UtcNow };
         Apply(expense, request);
         db.Expenses.Add(expense);
         await db.SaveChangesAsync();
@@ -60,8 +64,12 @@ public class ExpenseService(PennyWiseDbContext db, AppClock clock)
         await db.SaveChangesAsync();
     }
 
-    private async Task<Expense> FindAsync(int id) =>
-        await db.Expenses.FindAsync(id) ?? throw new NotFoundException($"Expense {id} was not found.");
+    private async Task<Expense> FindAsync(int id)
+    {
+        var userId = currentUser.Id;
+        return await db.Expenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId)
+            ?? throw new NotFoundException($"Expense {id} was not found.");
+    }
 
     // The request was already validated, so the ! and Parse calls cannot fail here.
     private void Apply(Expense expense, ExpenseRequest request)

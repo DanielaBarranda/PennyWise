@@ -24,6 +24,10 @@ Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
 # Workstation garbage collection uses far less memory on this 1 GB instance.
 Environment=DOTNET_gcServer=0
 Environment=DOTNET_NOLOGO=1
+# Private settings kept only on the server (not in Git), e.g.
+#   PennyWise__LegacyOwnerEmail=you@example.com
+# The leading "-" means the API still starts if the file does not exist.
+EnvironmentFile=-/etc/pennywise/api.env
 
 Restart=always
 RestartSec=5
@@ -31,7 +35,8 @@ KillSignal=SIGINT
 TimeoutStopSec=20
 SyslogIdentifier=pennywise-api
 
-# Hardening: the API runs as an unprivileged user and can only write to its data folder.
+# Hardening: the API runs as an unprivileged user and can only write to its data
+# folder (the database, its backups, and the sign-in cookie keys in keys/).
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

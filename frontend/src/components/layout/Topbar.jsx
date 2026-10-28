@@ -1,11 +1,12 @@
 import Icon from '../common/Icon.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
+import UserMenu from './UserMenu.jsx'
 
 const today = () =>
   new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-// Slim bar above the page: sidebar toggle, app description, today's date and the
-// light/dark switch.
+// Slim bar above the page: sidebar toggle, app description, today's date, the
+// light/dark switch and the signed-in account with Log out.
 export default function Topbar({ collapsed, onToggleSidebar, theme, onToggleTheme }) {
   return (
     <header className="topbar">
@@ -25,6 +26,7 @@ export default function Topbar({ collapsed, onToggleSidebar, theme, onToggleThem
         <p className="topbar__date">{today()}</p>
       </div>
       <ThemeToggle theme={theme} onToggle={onToggleTheme} className="topbar__theme" />
+      <UserMenu />
     </header>
   )
 }

@@ -411,3 +411,348 @@
     justify-content: center;
   }
 }
+
+/* ================= Sign-in and registration ================= */
+/* Two panels on wide screens: brand on the left (charcoal with a burgundy glow),
+   form on the right. On phones the brand becomes a compact header. */
+.auth {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100vh;
+}
+
+.auth__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background:
+    radial-gradient(700px 420px at 15% 0%, rgb(103 24 36 / 55%), transparent 70%),
+    var(--side-bg);
+  border-right: 1px solid var(--side-line);
+  color: var(--side-text);
+}
+
+.auth__brand-inner {
+  max-width: 360px;
+}
+
+.auth__emblem {
+  width: 112px;
+  height: auto;
+  margin-bottom: 18px;
+}
+
+.auth__name {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--side-text-strong);
+}
+
+.auth__tagline {
+  margin-top: 8px;
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.auth__points {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth__points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--side-text-strong);
+}
+
+.auth__point-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgb(216 173 66 / 14%);
+  color: var(--gold);
+}
+
+.auth__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px clamp(16px, 5vw, 64px) 48px;
+}
+
+.auth__main:focus {
+  outline: none;
+}
+
+.auth__toolbar {
+  align-self: flex-end;
+  margin-bottom: auto;
+}
+
+.auth__card {
+  width: min(440px, 100%);
+  margin: 24px 0 auto;
+  padding: 32px 30px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-card);
+}
+
+.auth__title {
+  font-size: 1.75rem;
+}
+
+.auth__title:focus {
+  outline: none;
+}
+
+.auth__subtitle {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.auth__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunk);
+  font-size: var(--fs-sm);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.auth__switch {
+  margin-top: 22px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.auth__switch a {
+  font-weight: 600;
+}
+
+.button--block {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 4px;
+}
+
+/* Password show/hide button inside the input (no ₱ prefix, so normal left padding). */
+.input-affix .input-affix__input--suffix {
+  padding-left: 14px;
+  padding-right: 48px;
+}
+
+/* Edge adds its own reveal button to password fields; ours replaces it. */
+input::-ms-reveal {
+  display: none;
+}
+
+.input-affix__suffix {
+  position: absolute;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.input-affix__suffix:hover {
+  background: var(--surface-sunk);
+  color: var(--text);
+}
+
+.password-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.password-rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.password-rules__met {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* Signed-in account in the top bar and in the phone menu. */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.user-menu__avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.user-menu__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.user-menu__name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu__email {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-menu--bar {
+  max-width: 340px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+
+/* In the phone menu panel: pinned to the bottom, on the charcoal surface. */
+.user-menu--panel {
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--side-line);
+  color: var(--side-text-strong);
+}
+
+.user-menu--panel .user-menu__email {
+  color: var(--side-text);
+}
+
+.user-menu--panel .user-menu__logout {
+  width: 100%;
+  justify-content: center;
+  border-color: var(--side-line);
+  color: var(--side-text-strong);
+}
+
+.user-menu--panel .user-menu__logout:hover:not(:disabled) {
+  background: var(--side-hover);
+}
+
+.drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* First load while the session is checked. */
+.splash {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.splash img {
+  animation: splash-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes splash-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 1100px) {
+  .user-menu--bar .user-menu__email {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth__brand {
+    justify-content: flex-start;
+    padding: 18px 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--side-line);
+  }
+
+  .auth__brand-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .auth__emblem {
+    width: 44px;
+    margin: 0;
+  }
+
+  .auth__name {
+    font-size: 1.35rem;
+  }
+
+  .auth__tagline,
+  .auth__points {
+    display: none;
+  }
+
+  .auth__main {
+    justify-content: flex-start;
+    padding-top: 12px;
+  }
+
+  .auth__card {
+    margin-top: 8px;
+    padding: 24px 20px;
+  }
+}

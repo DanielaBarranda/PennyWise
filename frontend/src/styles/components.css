@@ -898,6 +898,8 @@
 }
 
 input[type='text'],
+input[type='email'],
+input[type='password'],
 input[type='date'],
 select {
   width: 100%;
@@ -910,12 +912,16 @@ select {
 }
 
 input[type='text']:hover,
+input[type='email']:hover,
+input[type='password']:hover,
 input[type='date']:hover,
 select:hover {
   border-color: var(--line-hover);
 }
 
 input[type='text']:focus-visible,
+input[type='email']:focus-visible,
+input[type='password']:focus-visible,
 input[type='date']:focus-visible,
 select:focus-visible {
   outline: none;
