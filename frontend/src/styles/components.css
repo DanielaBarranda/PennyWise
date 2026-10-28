@@ -201,7 +201,22 @@
   }
 }
 
-@media (max-width: 420px) {
+/* Phones keep two cards per row so all four numbers fit on one screen. */
+@media (max-width: 480px) {
+  .stat-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-card__value {
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 340px) {
   .stat-grid {
     grid-template-columns: 1fr;
   }

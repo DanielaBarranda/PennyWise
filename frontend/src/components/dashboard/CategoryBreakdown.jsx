@@ -5,7 +5,10 @@ import { formatPercent, formatPeso } from '../../utils/format.js'
 // A horizontal bar chart drawn with plain CSS. Every bar also shows its value
 // as text, so the chart needs no separate screen-reader table and no chart library.
 export default function CategoryBreakdown({ summary }) {
-  const spent = summary.categories.filter((c) => c.total > 0).sort((a, b) => b.total - a.total)
+  // Categories with spending, plus any with a limit, so users can see untouched budgets too.
+  const spent = summary.categories
+    .filter((c) => c.total > 0 || c.limit !== null)
+    .sort((a, b) => b.total - a.total)
   const largest = spent[0]?.total ?? 0
 
   return (
@@ -29,15 +32,19 @@ export default function CategoryBreakdown({ summary }) {
                   </span>
                 </div>
                 <div className="breakdown__track" aria-hidden="true">
-                  <div
-                    className="breakdown__bar"
-                    style={{ width: `${(c.total / largest) * 100}%`, background: CATEGORY_COLORS[c.category] }}
-                  />
+                  {c.total > 0 && (
+                    <div
+                      className="breakdown__bar"
+                      style={{ width: `${(c.total / largest) * 100}%`, background: CATEGORY_COLORS[c.category] }}
+                    />
+                  )}
                 </div>
                 {c.limit !== null && (
                   <p className={`breakdown__limit${c.status === 'Exceeded' ? ' breakdown__limit--over' : ''}`}>
-                    Limit {formatPeso(c.limit)}
-                    {c.status === 'Exceeded' ? ' · over limit' : c.status === 'Warning' ? ' · close to limit' : ''}
+                    Limit {formatPeso(c.limit)} ·{' '}
+                    {c.status === 'Exceeded'
+                      ? `over by ${formatPeso(c.total - c.limit)}`
+                      : `${formatPeso(c.limit - c.total)} left${c.status === 'Warning' ? ' (close to limit)' : ''}`}
                   </p>
                 )}
               </li>

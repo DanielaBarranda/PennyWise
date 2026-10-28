@@ -163,8 +163,11 @@
 }
 
 @media (max-width: 768px) {
+  /* The header row stays its natural height; only the content row grows.
+     Without this, short pages stretched the top bar to fill the screen. */
   .app-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .sidebar {
