@@ -47,6 +47,10 @@
 
   --focus: var(--crimson);
 
+  /* Type scale: two small sizes only, both readable (13px and 14px at default zoom). */
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.875rem;
+
   --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
 

@@ -127,12 +127,12 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px 16px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .card__meta {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: var(--fs-sm);
 }
 
 .card__meta strong {
@@ -158,57 +158,51 @@
   padding: 24px;
 }
 
-/* ================= Budget overview ("ticket") ================= */
+/* ================= Budget overview ================= */
+/* One burgundy surface: amount and status (left), the three supporting numbers
+   (right), and progress toward the budget underneath, separated by a hairline. */
 .overview {
-  /* The stats strip has a fixed height so the ticket notches always line up with its top edge. */
-  --stats-h: 108px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'head stats'
+    'progress progress';
+  gap: 22px 40px;
+  padding: 26px 30px 22px;
   border-radius: var(--r-xl);
   background: var(--burgundy);
   color: var(--on-dark);
   box-shadow: var(--shadow-raised);
-  overflow: hidden;
   --focus: var(--gold);
 }
 
-/* Two half-circle notches where the stats strip begins, like an admission ticket. */
-.overview:not(.overview--empty) {
-  -webkit-mask:
-    radial-gradient(circle 11px at 0 calc(100% - var(--stats-h)), transparent 98%, #000 100%),
-    radial-gradient(circle 11px at 100% calc(100% - var(--stats-h)), transparent 98%, #000 100%);
-  -webkit-mask-composite: source-in;
-  mask:
-    radial-gradient(circle 11px at 0 calc(100% - var(--stats-h)), transparent 98%, #000 100%),
-    radial-gradient(circle 11px at 100% calc(100% - var(--stats-h)), transparent 98%, #000 100%);
-  mask-composite: intersect;
+.overview__head {
+  grid-area: head;
+  min-width: 0;
 }
 
-.overview__main {
-  padding: 26px 32px 24px;
-}
-
-.overview__top {
+.overview__title-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
+  gap: 8px 12px;
 }
 
 .overview__label {
   font-family: var(--font-body);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--on-dark-muted);
 }
 
 .overview__figure {
-  margin: 6px 0 22px;
+  margin-top: 10px;
   font-family: var(--font-display);
-  font-size: clamp(2.6rem, 1.9rem + 3vw, 4.25rem);
-  font-weight: 800;
+  font-size: clamp(2.25rem, 1.75rem + 1.6vw, 3.25rem);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--gold);
   overflow-wrap: anywhere;
@@ -218,33 +212,55 @@
   color: #ffa3aa;
 }
 
-.overview__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: var(--r-pill);
-  background: rgb(255 255 255 / 8%);
-  font-size: 0.88rem;
-  font-weight: 600;
+.overview__stats {
+  grid-area: stats;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  align-self: end;
+  margin: 0;
 }
 
-.overview__status--ok .icon {
-  color: #8fd8ae;
+.overview__stat {
+  padding: 2px 24px;
+  border-left: 1px solid rgb(255 255 255 / 16%);
 }
 
-.overview__status--warning .icon {
-  color: #f5c04f;
+.overview__stat:last-child {
+  padding-right: 0;
 }
 
-.overview__status--danger .icon {
-  color: #ffa3aa;
+.overview__stat dt {
+  color: var(--on-dark-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.overview__stat dd {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.overview__stat .overview__stat-note {
+  margin-top: 1px;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--on-dark-muted);
+}
+
+.overview__progress {
+  grid-area: progress;
+  padding-top: 18px;
+  border-top: 1px solid rgb(255 255 255 / 14%);
 }
 
 .meter {
   position: relative;
-  height: 12px;
+  height: 10px;
   border-radius: var(--r-pill);
   background: rgb(255 255 255 / 14%);
 }
@@ -266,92 +282,150 @@
 
 .meter__mark {
   position: absolute;
-  top: -5px;
-  bottom: -5px;
+  top: -4px;
+  bottom: -4px;
   width: 2px;
   border-radius: 2px;
-  background: rgb(255 255 255 / 70%);
+  background: rgb(255 255 255 / 75%);
   transform: translateX(-1px);
 }
 
-.overview__caption {
-  margin-top: 12px;
-  color: var(--on-dark-muted);
-  font-size: 0.92rem;
-}
-
-.overview__stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-content: center;
-  gap: 16px;
-  height: var(--stats-h);
-  margin: 0;
-  padding: 14px 32px;
-  border-top: 2px dashed rgb(255 255 255 / 20%);
-  background: var(--burgundy-deep);
-}
-
-.overview__stat dt {
+.overview__progress-labels {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-top: 10px;
   color: var(--on-dark-muted);
-  font-size: 0.85rem;
-}
-
-.overview__stat dd {
-  margin: 4px 0 0;
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
 
-.overview__stat .overview__stat-note {
-  margin-top: 0;
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: var(--on-dark-muted);
+.overview__mark-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overview__mark-key {
+  width: 2px;
+  height: 12px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 75%);
+}
+
+/* No budget yet: the amount spent and a call to action, side by side. */
+.overview--empty {
+  grid-template-areas: 'head cta';
+}
+
+.overview__cta {
+  grid-area: cta;
+  align-self: end;
 }
 
 .overview--empty .overview__figure {
-  margin-bottom: 8px;
   color: var(--on-dark);
 }
 
-.overview--empty .overview__caption {
-  max-width: 52ch;
-  margin: 0 0 20px;
+.overview__caption {
+  max-width: 56ch;
+  margin-top: 10px;
+  color: var(--on-dark-muted);
+  font-size: var(--fs-sm);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 900px) {
   .overview {
-    --stats-h: 100px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'progress'
+      'stats';
+    gap: 20px;
+    padding: 22px 22px 20px;
   }
 
-  .overview__main {
-    padding: 22px 20px 20px;
+  .overview--empty {
+    grid-template-areas:
+      'head'
+      'cta';
+  }
+
+  .overview__progress {
+    padding-top: 0;
+    border-top: 0;
   }
 
   .overview__stats {
-    gap: 10px;
-    padding: 16px 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-self: stretch;
+    padding-top: 16px;
+    border-top: 1px solid rgb(255 255 255 / 14%);
   }
 
-  .overview__stat dt {
-    font-size: 0.76rem;
+  .overview__stat {
+    padding: 0 12px;
   }
 
-  .overview__stat dt .icon {
-    display: none;
+  .overview__stat:first-child {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .overview__stat dd {
-    font-size: 1rem;
+    font-size: clamp(0.88rem, 3.4vw, 1.05rem);
   }
+}
+
+/* ================= Status badges ================= */
+/* Always text plus an icon, so a status never depends on color alone. */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.status-badge--ok {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.status-badge--warning {
+  background: var(--warning-bg);
+  border-color: #efd391;
+  color: var(--warning);
+}
+
+.status-badge--danger {
+  background: var(--danger-bg);
+  border-color: #f3c1bb;
+  color: var(--danger);
+}
+
+.status-badge--on-dark {
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 18%);
+  color: var(--on-dark);
+}
+
+.status-badge--on-dark.status-badge--ok .icon {
+  color: #8fd8ae;
+}
+
+.status-badge--on-dark.status-badge--warning .icon {
+  color: #f5c04f;
+}
+
+.status-badge--on-dark.status-badge--danger .icon {
+  color: #ffa3aa;
 }
 
 /* ================= Alerts ================= */
@@ -395,9 +469,9 @@
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   color: var(--cat);
   background: color-mix(in srgb, var(--cat) 13%, #fff);
 }
@@ -424,7 +498,8 @@
 
 .breakdown__row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
   padding: 14px 0;
   border-top: 1px solid var(--line);
@@ -432,18 +507,22 @@
 
 .breakdown__row:first-child {
   border-top: 0;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .breakdown__line {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 4px 12px;
 }
 
 .breakdown__name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
   font-weight: 600;
 }
 
@@ -453,8 +532,8 @@
 }
 
 .breakdown__track {
-  height: 8px;
-  margin: 8px 0 7px;
+  height: 6px;
+  margin: 9px 0 8px;
   border-radius: var(--r-pill);
   background: var(--surface-sunk);
   overflow: hidden;
@@ -479,22 +558,16 @@
 
 .breakdown__meta {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
-.breakdown__detail {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.breakdown__row--warning .breakdown__detail {
+.breakdown__row--warning .breakdown__meta > :first-child {
   color: var(--warning);
   font-weight: 600;
 }
 
-.breakdown__row--danger .breakdown__detail {
+.breakdown__row--danger .breakdown__meta > :first-child {
   color: var(--danger);
   font-weight: 600;
 }
@@ -508,7 +581,7 @@
 
 .recent__item {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 12px 0;
@@ -539,7 +612,7 @@
 .recent__category,
 .recent__date {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
 }
 
 .recent__amount {
@@ -605,7 +678,7 @@
   padding: 10px 24px;
   background: var(--paper);
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   text-align: left;
 }
@@ -648,7 +721,7 @@
 .expense-table__category,
 .expense-table__date {
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: var(--fs-sm);
 }
 
 .expense-table__date {
@@ -658,7 +731,7 @@
 .expense-table__mobile-date {
   display: none;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
 }
 
 .expense-table__amount {
@@ -814,12 +887,12 @@
 
 .field__hint {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
 }
 
 .field__error {
   color: var(--danger);
-  font-size: 0.86rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 
@@ -1018,7 +1091,7 @@ select:focus-visible {
   gap: 6px;
   margin-top: 8px;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1102,7 +1175,7 @@ select:focus-visible {
 .modal__description {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: var(--fs-sm);
 }
 
 .modal__actions {
@@ -1226,7 +1299,7 @@ select:focus-visible {
 }
 
 .skeleton--overview {
-  min-height: 250px;
+  min-height: 196px;
   border: 0;
   border-radius: var(--r-xl);
   background: var(--burgundy);
@@ -1239,8 +1312,8 @@ select:focus-visible {
 }
 
 .skeleton--overview .skeleton__bar--wide {
-  width: 45%;
-  height: 56px;
+  width: 40%;
+  height: 48px;
 }
 
 .skeleton--card {

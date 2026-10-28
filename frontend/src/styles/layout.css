@@ -11,8 +11,8 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 28px 16px;
+  gap: 22px;
+  padding: 24px 16px;
   background: var(--charcoal);
   color: var(--on-dark-muted);
   --focus: var(--gold);
@@ -29,7 +29,7 @@
 }
 
 .brand__logo {
-  width: 168px;
+  width: 148px;
   height: auto;
 }
 
@@ -45,10 +45,15 @@
   letter-spacing: -0.02em;
 }
 
+.nav {
+  padding-top: 20px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
 .nav ul {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -59,7 +64,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 14px;
+  min-height: 44px;
+  padding: 10px 14px;
   border-radius: var(--r-md);
   color: var(--on-dark-muted);
   font-weight: 500;
@@ -96,7 +102,7 @@
 }
 
 .main > * + * {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 /* Page header: title on the left; data controls (month) and actions grouped on the right. */
@@ -139,7 +145,7 @@
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   transition: opacity 0.2s;
 }
 
@@ -149,9 +155,9 @@
 
 .dashboard__columns {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1100px) {
@@ -190,6 +196,11 @@
   .brand__emblem {
     width: 44px;
     height: auto;
+  }
+
+  .nav {
+    padding-top: 0;
+    border-top: 0;
   }
 
   .nav ul {
