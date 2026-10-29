@@ -28,6 +28,10 @@ public class User
     // preference only: it never changes the monthly budget.
     public AllowancePeriod AllowancePeriod { get; set; } = AllowancePeriod.Monthly;
 
+    // When the profile photo last changed (null = no photo). The browser adds it
+    // to the photo URL, so a new photo is never hidden by an old cached one.
+    public DateTime? AvatarUpdatedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
 

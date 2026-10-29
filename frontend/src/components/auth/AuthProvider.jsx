@@ -58,6 +58,18 @@ export default function AuthProvider({ children }) {
     return me
   }, [])
 
+  const uploadAvatar = useCallback(async (blob) => {
+    const me = await api.uploadAvatar(blob)
+    setUser(me)
+    return me
+  }, [])
+
+  const removeAvatar = useCallback(async () => {
+    const me = await api.removeAvatar()
+    setUser(me)
+    return me
+  }, [])
+
   // The API issues this browser a fresh cookie and signs out every other device.
   const changePassword = useCallback((form) => api.changePassword(form), [])
 
@@ -71,8 +83,8 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, changePassword }),
-    [user, status, notice, login, register, logout, updateProfile, updatePreferences, changePassword],
+    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword }),
+    [user, status, notice, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

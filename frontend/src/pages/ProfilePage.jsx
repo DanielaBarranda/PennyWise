@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import FormField from '../components/common/FormField.jsx'
+import Avatar from '../components/common/Avatar.jsx'
+import ConfirmDialog from '../components/common/ConfirmDialog.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import PasswordField from '../components/auth/PasswordField.jsx'
@@ -8,7 +10,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 import { PASSWORD_RULES } from '../utils/authValidation.js'
 import { formatDate } from '../utils/format.js'
-import { initials } from '../utils/initials.js'
+import { resizeAvatar } from '../utils/resizeImage.js'
 
 export default function ProfilePage() {
   const { user, logout } = useAuth()
@@ -19,13 +21,12 @@ export default function ProfilePage() {
       <div className="profile">
         <section className="card" aria-labelledby="account-heading">
           <div className="profile__identity">
-            <span className="avatar avatar--xl" aria-hidden="true">
-              {initials(user.name)}
-            </span>
+            <Avatar user={user} size="xl" />
             <div>
               <h2 id="account-heading">{user.name}</h2>
               <p className="profile__meta">{user.email}</p>
               {user.memberSince && <p className="profile__meta">Member since {formatDate(user.memberSince)}</p>}
+              <PhotoControls />
             </div>
           </div>
           <NameForm />
@@ -53,6 +54,80 @@ export default function ProfilePage() {
         </section>
       </div>
     </>
+  )
+}
+
+// Change or remove the profile photo. The photo is cropped to a square and
+// shrunk in the browser, so only a small image is ever uploaded.
+function PhotoControls() {
+  const { user, uploadAvatar, removeAvatar } = useAuth()
+  const toast = useToast()
+  const inputRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState(null)
+  const hasPhoto = Boolean(user.avatarVersion)
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = '' // choosing the same file again still triggers a change
+    if (!file) return
+    setError(null)
+    setBusy(true)
+    try {
+      await uploadAvatar(await resizeAvatar(file))
+      toast.success(hasPhoto ? 'Profile photo changed.' : 'Profile photo added.')
+    } catch (err) {
+      setError(err.fieldErrors?.photo ?? err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleRemove() {
+    setBusy(true)
+    try {
+      await removeAvatar()
+      setConfirming(false)
+      toast.success('Profile photo removed.')
+    } catch (err) {
+      setError(err.message)
+      setConfirming(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="profile__photo">
+      <div className="profile__photo-actions">
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="visually-hidden" tabIndex={-1} onChange={handleFile} />
+        <button type="button" className="button button--secondary button--small" onClick={() => inputRef.current.click()} disabled={busy}>
+          <Icon name="camera" size={16} />
+          {busy ? 'Saving…' : hasPhoto ? 'Change photo' : 'Add photo'}
+        </button>
+        {hasPhoto && (
+          <button type="button" className="button button--ghost button--small profile__photo-remove" onClick={() => setConfirming(true)} disabled={busy}>
+            <Icon name="trash" size={16} />
+            Remove photo
+          </button>
+        )}
+      </div>
+      {error ? (
+        <p className="field__error" role="alert">{error}</p>
+      ) : (
+        <p className="profile__photo-hint">JPEG, PNG or WebP. It’s cropped to a square.</p>
+      )}
+      <ConfirmDialog
+        open={confirming}
+        title="Remove your profile photo?"
+        message="Your initials will show instead. You can add a photo again at any time."
+        confirmLabel="Remove photo"
+        busy={busy}
+        onConfirm={handleRemove}
+        onCancel={() => setConfirming(false)}
+      />
+    </div>
   )
 }
 

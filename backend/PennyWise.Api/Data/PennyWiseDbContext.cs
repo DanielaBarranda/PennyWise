@@ -10,6 +10,7 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
     public DbSet<SavingsTransaction> SavingsTransactions => Set<SavingsTransaction>();
     public DbSet<Bill> Bills => Set<Bill>();
@@ -27,6 +28,14 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
             entity.HasIndex(u => u.NormalizedEmail).IsUnique();
             entity.Property(u => u.AllowancePeriod).HasConversion<string>().HasMaxLength(10)
                 .HasDefaultValue(AllowancePeriod.Monthly).HasSentinel((AllowancePeriod)(-1));
+        });
+
+        modelBuilder.Entity<UserAvatar>(entity =>
+        {
+            entity.HasKey(a => a.UserId);
+            entity.Property(a => a.ContentType).HasMaxLength(20).IsRequired();
+            entity.Property(a => a.Data).IsRequired();
+            entity.HasOne<User>().WithOne().HasForeignKey<UserAvatar>(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SavingsGoal>(entity =>

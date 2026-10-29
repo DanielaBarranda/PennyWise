@@ -60,7 +60,10 @@ public class ChangePasswordRequest
 
 // What the browser learns about the signed-in user. Never the password hash,
 // security stamp or lockout details.
-public record UserResponse(int Id, string Name, string Email, DateTime MemberSince, string AllowancePeriod)
+// AvatarVersion is null when there is no profile photo; otherwise it changes
+// whenever the photo does, and goes on the photo URL to bust the cache.
+public record UserResponse(int Id, string Name, string Email, DateTime MemberSince, string AllowancePeriod, string? AvatarVersion)
 {
-    public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt, u.AllowancePeriod.ToString());
+    public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt, u.AllowancePeriod.ToString(),
+        u.AvatarUpdatedAt is { } t ? t.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture) : null);
 }

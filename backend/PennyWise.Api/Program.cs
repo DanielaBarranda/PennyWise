@@ -43,6 +43,7 @@ builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<SavingsService>();
+builder.Services.AddScoped<AvatarService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<AllowanceService>();
 builder.Services.AddScoped<InsightService>();

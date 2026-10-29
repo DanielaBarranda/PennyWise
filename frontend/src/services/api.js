@@ -31,7 +31,8 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, query } = {}) {
+// `file` sends raw bytes (e.g. a photo) instead of JSON.
+async function request(path, { method = 'GET', body, query, file } = {}) {
   const url = new URL(BASE_URL + path, window.location.origin)
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null && value !== '') {
@@ -43,9 +44,13 @@ async function request(path, { method = 'GET', body, query } = {}) {
   try {
     response = await fetch(url, {
       method,
-      headers: body ? { ...CLIENT_HEADER, 'Content-Type': 'application/json' } : CLIENT_HEADER,
+      headers: file
+        ? { ...CLIENT_HEADER, 'Content-Type': file.type }
+        : body
+          ? { ...CLIENT_HEADER, 'Content-Type': 'application/json' }
+          : CLIENT_HEADER,
       credentials: 'same-origin',
-      body: body ? JSON.stringify(body) : undefined,
+      body: file ?? (body ? JSON.stringify(body) : undefined),
     })
   } catch {
     throw new ApiError('Cannot reach the PennyWise server. Check your connection and try again.', 0)
@@ -91,6 +96,10 @@ export const api = {
   logout: () => request('/auth/logout', { method: 'POST' }),
   updateProfile: (profile) => request('/auth/profile', { method: 'PUT', body: profile }),
   changePassword: (form) => request('/auth/change-password', { method: 'POST', body: form }),
+  uploadAvatar: (blob) => request('/auth/avatar', { method: 'PUT', file: blob }),
+  removeAvatar: () => request('/auth/avatar', { method: 'DELETE' }),
+  // The version changes with every new photo, so the browser can cache each one forever.
+  avatarUrl: (version) => `${BASE_URL}/auth/avatar?v=${encodeURIComponent(version)}`,
 
   getDashboardSummary: (month) => request('/dashboard/summary', { query: { month } }),
 

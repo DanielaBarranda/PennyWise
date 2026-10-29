@@ -827,3 +827,51 @@
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+
+/* ================= Profile photo ================= */
+.avatar--photo {
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile__identity .avatar--xl {
+  align-self: flex-start;
+  width: 88px;
+  height: 88px;
+  font-size: 1.8rem;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--line-strong);
+}
+
+.profile__photo {
+  margin-top: 12px;
+}
+
+.profile__photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile__photo-remove {
+  color: var(--danger);
+}
+
+.profile__photo-remove:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.profile__photo-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.profile__photo .field__error {
+  margin: 6px 0 0;
+}

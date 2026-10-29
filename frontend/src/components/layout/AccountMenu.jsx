@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import Icon from '../common/Icon.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
-import { initials } from '../../utils/initials.js'
+import Avatar from '../common/Avatar.jsx'
 
 // The round avatar button in the top bar. It opens a small menu with the
 // signed-in account, Profile and Log out.
@@ -79,17 +79,13 @@ export default function AccountMenu() {
         onClick={() => (open ? close() : openMenu())}
         onKeyDown={onButtonKeyDown}
       >
-        <span className="avatar" aria-hidden="true">
-          {initials(user.name)}
-        </span>
+        <Avatar user={user} />
       </button>
 
       {open && (
         <div className="account-menu__panel" onKeyDown={onMenuKeyDown}>
           <div className="account-menu__header">
-            <span className="avatar avatar--lg" aria-hidden="true">
-              {initials(user.name)}
-            </span>
+            <Avatar user={user} size="lg" />
             <span className="account-menu__who">
               <span className="account-menu__name">{user.name}</span>
               <span className="account-menu__email">{user.email}</span>

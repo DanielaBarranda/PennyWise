@@ -285,6 +285,9 @@ namespace PennyWise.Api.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("Monthly");
 
+                    b.Property<DateTime?>("AvatarUpdatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -324,6 +327,25 @@ namespace PennyWise.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("PennyWise.Api.Models.UserAvatar", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserAvatars");
                 });
 
             modelBuilder.Entity("PennyWise.Api.Models.Bill", b =>
@@ -390,6 +412,15 @@ namespace PennyWise.Api.Data.Migrations
                     b.HasOne("PennyWise.Api.Models.SavingsGoal", null)
                         .WithMany("Transactions")
                         .HasForeignKey("GoalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PennyWise.Api.Models.UserAvatar", b =>
+                {
+                    b.HasOne("PennyWise.Api.Models.User", null)
+                        .WithOne()
+                        .HasForeignKey("PennyWise.Api.Models.UserAvatar", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

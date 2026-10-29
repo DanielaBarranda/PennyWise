@@ -22,6 +22,7 @@ public class AuthController(
     PennyWiseDbContext db,
     IPasswordHasher<User> hasher,
     LegacyDataClaimer legacyData,
+    AvatarService avatars,
     AppClock clock) : ControllerBase
 {
     public const string StampClaim = "pennywise:stamp";
@@ -161,6 +162,29 @@ public class AuthController(
         return UserResponse.From(user);
     }
 
+    // The signed-in user's own photo only; there is no way to ask for someone else's.
+    // Served with nosniff and a locked-down CSP so the bytes can only ever be an image.
+    [HttpGet("avatar")]
+    public async Task<IActionResult> GetAvatar()
+    {
+        var avatar = await avatars.GetAsync(CurrentUserId());
+        if (avatar is null) return NotFound();
+        Response.Headers.CacheControl = "private, max-age=31536000, immutable"; // the URL changes with each new photo
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+        return File(avatar.Data, avatar.ContentType);
+    }
+
+    // The request body is the image itself (Content-Type image/jpeg, image/png or image/webp).
+    [HttpPut("avatar")]
+    [RequestSizeLimit(AvatarService.MaxBytes + 1024)]
+    public async Task<ActionResult<UserResponse>> UploadAvatar() =>
+        UserResponse.From(await avatars.SaveAsync(CurrentUserId(), Request.Body));
+
+    [HttpDelete("avatar")]
+    public async Task<ActionResult<UserResponse>> RemoveAvatar() =>
+        UserResponse.From(await avatars.RemoveAsync(CurrentUserId()));
+
     // Needs the current password. A new security stamp signs out every other
     // browser and device; this one gets a fresh cookie and stays signed in.
     [HttpPost("change-password")]
@@ -192,9 +216,11 @@ public class AuthController(
         return NoContent();
     }
 
+    private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
     private async Task<User> CurrentUserAsync()
     {
-        var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var id = CurrentUserId();
         return await db.Users.FirstAsync(u => u.Id == id);
     }
 
