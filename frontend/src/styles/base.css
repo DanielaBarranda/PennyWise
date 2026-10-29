@@ -48,7 +48,9 @@
   --primary-hover: #561420;
   --on-primary: #ffffff;
   --link: #671824;
-  --focus: #d93645;
+  /* --app-focus stays the theme's focus color even where a dark area overrides --focus. */
+  --app-focus: #d93645;
+  --focus: var(--app-focus);
   --gold-ink: #7a5a0c;
 
   --selected-bg: #fbf3f4;
@@ -124,7 +126,9 @@
   --primary-hover: #ad2532;
   --on-primary: #ffffff;
   --link: #ff7b86;
-  --focus: #ff6b78;
+  /* --app-focus stays the theme's focus color even where a dark area overrides --focus. */
+  --app-focus: #ff6b78;
+  --focus: var(--app-focus);
   --gold-ink: #e3bd5c;
 
   --selected-bg: rgb(198 47 62 / 14%);

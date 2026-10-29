@@ -612,78 +612,205 @@ input::-ms-reveal {
   font-weight: 600;
 }
 
-/* Signed-in account in the top bar and in the phone menu. */
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.user-menu__avatar {
+/* Round avatar with the user's initials. */
+.avatar {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--primary);
   color: var(--on-primary);
   font-size: var(--fs-xs);
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.user-menu__text {
+.avatar--lg {
+  width: 42px;
+  height: 42px;
+  font-size: var(--fs-sm);
+}
+
+.avatar--xl {
+  width: 64px;
+  height: 64px;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
+
+/* Account menu: the avatar button in the top bar and the menu it opens. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu__button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.account-menu__button:hover .avatar,
+.account-menu__button[aria-expanded='true'] .avatar {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.account-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(272px, calc(100vw - 24px));
+  padding: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+  animation: menu-in 0.14s var(--ease);
+  --focus: var(--app-focus);
+}
+
+.account-menu__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+.account-menu__who {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
-.user-menu__name {
-  font-size: var(--fs-sm);
+.account-menu__name {
   font-weight: 600;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.user-menu__email {
+.account-menu__email {
   color: var(--muted);
   font-size: var(--fs-xs);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.user-menu--bar {
-  max-width: 340px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
+.account-menu__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* In the phone menu panel: pinned to the bottom, on the charcoal surface. */
-.user-menu--panel {
-  flex-wrap: wrap;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid var(--side-line);
-  color: var(--side-text-strong);
-}
-
-.user-menu--panel .user-menu__email {
-  color: var(--side-text);
-}
-
-.user-menu--panel .user-menu__logout {
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  justify-content: center;
-  border-color: var(--side-line);
-  color: var(--side-text-strong);
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.user-menu--panel .user-menu__logout:hover:not(:disabled) {
-  background: var(--side-hover);
+.account-menu__item:hover,
+.account-menu__item:focus-visible {
+  background: var(--surface-sunk);
+}
+
+.account-menu__item--danger {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  color: var(--danger);
+}
+
+.account-menu__item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Profile page */
+.profile {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.profile__identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile__identity h2 {
+  font-size: 1.3rem;
+}
+
+.profile__meta,
+.profile__hint {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.profile__hint {
+  margin-bottom: 16px;
+}
+
+.profile__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile__form input[readonly] {
+  background: var(--surface-sunk);
+  color: var(--muted);
+}
+
+.profile__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile__signout {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  .profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .drawer[open] {
@@ -705,12 +832,6 @@ input::-ms-reveal {
 @keyframes splash-pulse {
   50% {
     opacity: 0.45;
-  }
-}
-
-@media (max-width: 1100px) {
-  .user-menu--bar .user-menu__email {
-    display: none;
   }
 }
 

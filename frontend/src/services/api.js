@@ -89,6 +89,8 @@ export const api = {
   register: (form) => request('/auth/register', { method: 'POST', body: form }),
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
   logout: () => request('/auth/logout', { method: 'POST' }),
+  updateProfile: (profile) => request('/auth/profile', { method: 'PUT', body: profile }),
+  changePassword: (form) => request('/auth/change-password', { method: 'POST', body: form }),
 
   getDashboardSummary: (month) => request('/dashboard/summary', { query: { month } }),
 

@@ -52,10 +52,12 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 
 | Method | Route | Body | Success |
 |---|---|---|---|
-| POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `{ id, name, email }`, signed in |
-| POST | `/api/auth/login` | `{ email, password }` | 200 `{ id, name, email }`, signed in |
+| POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `{ id, name, email, memberSince }`, signed in |
+| POST | `/api/auth/login` | `{ email, password }` | 200 `{ id, name, email, memberSince }`, signed in |
 | POST | `/api/auth/logout` | | 204, cookie removed |
-| GET | `/api/auth/me` | | 200 `{ id, name, email }`, or 204 when nobody is signed in |
+| GET | `/api/auth/me` | | 200 `{ id, name, email, memberSince }`, or 204 when nobody is signed in |
+| PUT | `/api/auth/profile` | `{ name }` | 200 `{ id, name, email, memberSince }` (the email cannot be changed) |
+| POST | `/api/auth/change-password` | `{ currentPassword, newPassword, confirmPassword }` | 204; this browser stays signed in, every other device is signed out |
 
 Rules: name 1–80 characters; a valid email up to 254 characters, unique ignoring case and
 spaces; password 8–128 characters with at least one letter and one number; a wrong email

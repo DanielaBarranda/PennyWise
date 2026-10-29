@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from '../common/Icon.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
-import UserMenu from './UserMenu.jsx'
+import AccountMenu from './AccountMenu.jsx'
 
 const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -81,6 +81,7 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
 
       <div className="sidebar__mobile-actions">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} className="sidebar__theme" />
+        <AccountMenu />
         <button
           type="button"
           className="icon-button sidebar__menu-button"
@@ -114,7 +115,6 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
         <nav className="drawer__nav" aria-label="Main">
           <NavLinks route={route} onNavigate={() => setMenuOpen(false)} />
         </nav>
-        <UserMenu variant="panel" />
       </dialog>
     </aside>
   )

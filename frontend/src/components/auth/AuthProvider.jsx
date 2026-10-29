@@ -45,6 +45,15 @@ export default function AuthProvider({ children }) {
     return me
   }, [])
 
+  const updateProfile = useCallback(async (profile) => {
+    const me = await api.updateProfile(profile)
+    setUser(me)
+    return me
+  }, [])
+
+  // The API issues this browser a fresh cookie and signs out every other device.
+  const changePassword = useCallback((form) => api.changePassword(form), [])
+
   const logout = useCallback(async () => {
     try {
       await api.logout()
@@ -55,8 +64,8 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout }),
-    [user, status, notice, login, register, logout],
+    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, changePassword }),
+    [user, status, notice, login, register, logout, updateProfile, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

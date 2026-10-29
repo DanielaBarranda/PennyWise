@@ -140,6 +140,54 @@ public class AuthController(
         return user is null ? NoContent() : UserResponse.From(user);
     }
 
+    // Changes the display name. The email is the sign-in identity and stays fixed.
+    [HttpPut("profile")]
+    public async Task<ActionResult<UserResponse>> UpdateProfile(UpdateProfileRequest request)
+    {
+        var user = await CurrentUserAsync();
+        user.Name = request.Name!.Trim();
+        await db.SaveChangesAsync();
+        await SignInAsync(user); // refresh the name stored in the cookie
+        return UserResponse.From(user);
+    }
+
+    // Needs the current password. A new security stamp signs out every other
+    // browser and device; this one gets a fresh cookie and stays signed in.
+    [HttpPost("change-password")]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var user = await CurrentUserAsync();
+        if (hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword!) == PasswordVerificationResult.Failed)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["CurrentPassword"] = ["Current password is incorrect."],
+            }));
+        }
+        if (request.NewPassword == request.CurrentPassword)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["NewPassword"] = ["Choose a password different from your current one."],
+            }));
+        }
+
+        user.PasswordHash = hasher.HashPassword(user, request.NewPassword!);
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        user.FailedLoginCount = 0;
+        user.LockoutEndsAt = null;
+        await db.SaveChangesAsync();
+        await SignInAsync(user);
+        return NoContent();
+    }
+
+    private async Task<User> CurrentUserAsync()
+    {
+        var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return await db.Users.FirstAsync(u => u.Id == id);
+    }
+
     private Task SignInAsync(User user)
     {
         var identity = new ClaimsIdentity(

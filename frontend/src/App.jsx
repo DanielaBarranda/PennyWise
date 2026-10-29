@@ -6,6 +6,7 @@ import AuthProvider from './components/auth/AuthProvider.jsx'
 import AuthLayout from './components/auth/AuthLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import ExpensesPage from './pages/ExpensesPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
 import { useAuth } from './hooks/useAuth.js'
@@ -76,7 +77,7 @@ function Workspace({ route, theme, onToggleTheme }) {
   // The selected month is shared, so switching pages keeps the same month.
   const [month, setMonth] = useState(currentMonth)
   const [collapsed, toggleSidebar] = useSidebarCollapsed()
-  const Page = route === 'expenses' ? ExpensesPage : DashboardPage
+  const Page = { expenses: ExpensesPage, profile: ProfilePage }[route] ?? DashboardPage
 
   return (
     <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>

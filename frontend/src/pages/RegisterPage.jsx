@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import FormField from '../components/common/FormField.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PasswordField from '../components/auth/PasswordField.jsx'
+import PasswordRules from '../components/auth/PasswordRules.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
-import { PASSWORD_RULES, validateRegistration } from '../utils/authValidation.js'
+import { validateRegistration } from '../utils/authValidation.js'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -85,19 +86,7 @@ export default function RegisterPage() {
             error={errors.password}
             autoComplete="new-password"
           />
-          {/* Each rule turns into a check mark as it is met, so it is clear what is still missing. */}
-          <ul className="password-rules" aria-label="Password requirements">
-            {PASSWORD_RULES.map((rule) => {
-              const met = rule.test(form.password)
-              return (
-                <li key={rule.id} className={met ? 'password-rules__met' : undefined}>
-                  <Icon name={met ? 'check' : 'dot'} size={14} />
-                  {rule.text}
-                  <span className="visually-hidden">{met ? ' (done)' : ' (not yet)'}</span>
-                </li>
-              )
-            })}
-          </ul>
+          <PasswordRules password={form.password} />
         </div>
 
         <PasswordField
