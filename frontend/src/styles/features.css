@@ -875,3 +875,27 @@
 .profile__photo .field__error {
   margin: 6px 0 0;
 }
+
+/* ================= Delete account ================= */
+.profile__danger {
+  border-color: var(--danger-line);
+}
+
+.profile__danger h2 {
+  color: var(--danger);
+}
+
+.profile__danger .profile__hint {
+  margin: 0 0 16px;
+}
+
+.delete-list {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.delete-list li + li {
+  margin-top: 4px;
+}

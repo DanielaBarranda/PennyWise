@@ -96,6 +96,7 @@ export const api = {
   logout: () => request('/auth/logout', { method: 'POST' }),
   updateProfile: (profile) => request('/auth/profile', { method: 'PUT', body: profile }),
   changePassword: (form) => request('/auth/change-password', { method: 'POST', body: form }),
+  deleteAccount: (form) => request('/auth/delete-account', { method: 'POST', body: form }),
   uploadAvatar: (blob) => request('/auth/avatar', { method: 'PUT', file: blob }),
   removeAvatar: () => request('/auth/avatar', { method: 'DELETE' }),
   // The version changes with every new photo, so the browser can cache each one forever.

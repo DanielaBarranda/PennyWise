@@ -58,6 +58,15 @@ public class ChangePasswordRequest
     public string? ConfirmPassword { get; set; }
 }
 
+// Deleting the account needs the password again, so an unattended signed-in
+// browser cannot be used to erase someone's data.
+public class DeleteAccountRequest
+{
+    [Required(ErrorMessage = "Enter your password to confirm.")]
+    [StringLength(AuthRules.MaxPasswordLength)]
+    public string? Password { get; set; }
+}
+
 // What the browser learns about the signed-in user. Never the password hash,
 // security stamp or lockout details.
 // AvatarVersion is null when there is no profile photo; otherwise it changes

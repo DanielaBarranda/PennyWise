@@ -23,7 +23,8 @@ public class AuthController(
     IPasswordHasher<User> hasher,
     LegacyDataClaimer legacyData,
     AvatarService avatars,
-    AppClock clock) : ControllerBase
+    AppClock clock,
+    ILogger<AuthController> logger) : ControllerBase
 {
     public const string StampClaim = "pennywise:stamp";
     private const string WrongCredentials = "Email or password is incorrect.";
@@ -213,6 +214,30 @@ public class AuthController(
         user.LockoutEndsAt = null;
         await db.SaveChangesAsync();
         await SignInAsync(user);
+        return NoContent();
+    }
+
+    // Permanently deletes the account and everything in it: budgets, expenses,
+    // savings, bills and the photo all go with the user (cascading foreign keys).
+    // Every other signed-in device is signed out on its next request, because
+    // its cookie no longer matches an existing account.
+    [HttpPost("delete-account")]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request)
+    {
+        var user = await CurrentUserAsync();
+        if (hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!) == PasswordVerificationResult.Failed)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["Password"] = ["Password is incorrect."],
+            }));
+        }
+
+        db.Users.Remove(user);
+        await db.SaveChangesAsync();
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        logger.LogInformation("Account {UserId} was deleted by its owner.", user.Id);
         return NoContent();
     }
 

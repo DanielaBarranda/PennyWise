@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import FormField from '../components/common/FormField.jsx'
 import Avatar from '../components/common/Avatar.jsx'
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx'
+import Modal from '../components/common/Modal.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
 import PasswordField from '../components/auth/PasswordField.jsx'
@@ -51,6 +52,13 @@ export default function ProfilePage() {
           </div>
           <p className="profile__hint">For your security, other devices will be logged out after you change it.</p>
           <PasswordForm />
+        </section>
+
+        <section className="card profile__danger" aria-labelledby="delete-heading">
+          <div className="card__header">
+            <h2 id="delete-heading">Delete account</h2>
+          </div>
+          <DeleteAccount />
         </section>
       </div>
     </>
@@ -128,6 +136,85 @@ function PhotoControls() {
         onCancel={() => setConfirming(false)}
       />
     </div>
+  )
+}
+
+// Permanently deletes the account after the password is entered again and the
+// consequences are acknowledged.
+function DeleteAccount() {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  return (
+    <>
+      <p className="profile__hint">
+        Permanently deletes your account and everything in it: budgets, expenses, savings goals, bills and your photo.
+        This can’t be undone. To keep a copy, download your monthly reports from{' '}
+        <a href="#/reports">Reports</a> first.
+      </p>
+      <button type="button" className="button button--danger" onClick={() => setOpen(true)}>
+        <Icon name="trash" />
+        Delete my account
+      </button>
+      <Modal open={open} title="Delete your account?" description="This permanently removes your account and all of its data." onClose={busy ? () => {} : () => setOpen(false)}>
+        {open && <DeleteAccountForm onCancel={() => setOpen(false)} onBusyChange={setBusy} />}
+      </Modal>
+    </>
+  )
+}
+
+function DeleteAccountForm({ onCancel, onBusyChange }) {
+  const { user, deleteAccount } = useAuth()
+  const [password, setPassword] = useState('')
+  const [understood, setUnderstood] = useState(false)
+  const [error, setError] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (!password) return setError('Enter your password to confirm.')
+    setError(null)
+    setBusy(true)
+    onBusyChange(true)
+    try {
+      await deleteAccount(password) // signs out and shows the login page
+    } catch (err) {
+      setError(err.fieldErrors?.password ?? err.message)
+      setBusy(false)
+      onBusyChange(false)
+    }
+  }
+
+  return (
+    <form className="form" onSubmit={handleSubmit} noValidate>
+      <ul className="delete-list">
+        <li>Your budgets, expenses, savings goals, bills and photo are deleted from PennyWise.</li>
+        <li>You’re signed out on every device.</li>
+        <li>You can sign up again with {user.email}, but you’ll start with an empty account.</li>
+      </ul>
+      <PasswordField
+        label="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        error={error}
+        autoComplete="current-password"
+        autoFocus
+      />
+      <label className="check">
+        <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
+        <span>
+          <span className="check__label">I understand this can’t be undone</span>
+        </span>
+      </label>
+      <div className="modal__actions">
+        <button type="button" className="button button--ghost" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button type="submit" className="button button--danger" disabled={!understood || busy}>
+          {busy ? 'Deleting…' : 'Delete my account'}
+        </button>
+      </div>
+    </form>
   )
 }
 

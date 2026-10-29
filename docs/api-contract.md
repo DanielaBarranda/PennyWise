@@ -62,9 +62,15 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | PUT | `/api/auth/avatar` | the image bytes (`Content-Type: image/…`) | 200 User |
 | DELETE | `/api/auth/avatar` | | 200 User |
 | POST | `/api/auth/change-password` | `{ currentPassword, newPassword, confirmPassword }` | 204; this browser stays signed in, every other device is signed out |
+| POST | `/api/auth/delete-account` | `{ password }` | 204, signed out. Deletes the account and all of its data; 400 if the password is wrong |
 
 User is `{ id, name, email, memberSince, allowancePeriod, avatarVersion }`. `avatarVersion` is
 `null` when there is no profile photo and changes whenever the photo does.
+
+Deleting an account removes the user and, through cascading foreign keys, every budget,
+category limit, expense, savings goal and transaction, bill and payment, and the photo. Other
+signed-in devices are signed out on their next request. Copies taken by the deploy script's
+database backups (the 5 most recent deploys) are not changed and expire as new backups replace them.
 
 Profile photos: the web app crops and shrinks them to 256 × 256 JPEG first. The API accepts at
 most 256 KB, checks the real file type from its first bytes (JPEG, PNG or WebP only; SVG and

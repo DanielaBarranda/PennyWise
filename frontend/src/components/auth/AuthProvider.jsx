@@ -73,6 +73,21 @@ export default function AuthProvider({ children }) {
   // The API issues this browser a fresh cookie and signs out every other device.
   const changePassword = useCallback((form) => api.changePassword(form), [])
 
+  // Permanent. Also forgets what this browser remembered for the account.
+  const deleteAccount = useCallback(
+    async (password) => {
+      await api.deleteAccount({ password })
+      try {
+        localStorage.removeItem(`pennywise.dismissedInsights.${user?.id}`)
+      } catch {
+        // storage unavailable: nothing was saved there anyway
+      }
+      setUser(null)
+      setNotice('Your account and all of its data have been deleted.')
+    },
+    [user],
+  )
+
   const logout = useCallback(async () => {
     try {
       await api.logout()
@@ -83,8 +98,8 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword }),
-    [user, status, notice, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword],
+    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount }),
+    [user, status, notice, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
