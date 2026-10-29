@@ -24,5 +24,16 @@ public class User
 
     public DateTime? LockoutEndsAt { get; set; }
 
+    // How the dashboard shows the suggested spending allowance. A display
+    // preference only: it never changes the monthly budget.
+    public AllowancePeriod AllowancePeriod { get; set; } = AllowancePeriod.Monthly;
+
     public DateTime CreatedAt { get; set; }
+}
+
+public enum AllowancePeriod
+{
+    Daily,
+    Weekly,
+    Monthly,
 }

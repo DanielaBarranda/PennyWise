@@ -60,7 +60,7 @@ public class ChangePasswordRequest
 
 // What the browser learns about the signed-in user. Never the password hash,
 // security stamp or lockout details.
-public record UserResponse(int Id, string Name, string Email, DateTime MemberSince)
+public record UserResponse(int Id, string Name, string Email, DateTime MemberSince, string AllowancePeriod)
 {
-    public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt);
+    public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt, u.AllowancePeriod.ToString());
 }

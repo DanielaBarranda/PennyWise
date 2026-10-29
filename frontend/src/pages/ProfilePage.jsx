@@ -15,7 +15,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" subtitle="Your account details and password." />
+      <PageHeader title="Profile" subtitle="Your account details, preferences and password." />
       <div className="profile">
         <section className="card" aria-labelledby="account-heading">
           <div className="profile__identity">
@@ -37,6 +37,13 @@ export default function ProfilePage() {
           </div>
         </section>
 
+        <section className="card" aria-labelledby="preferences-heading">
+          <div className="card__header">
+            <h2 id="preferences-heading">Preferences</h2>
+          </div>
+          <AllowancePreference />
+        </section>
+
         <section className="card" aria-labelledby="password-heading">
           <div className="card__header">
             <h2 id="password-heading">Change password</h2>
@@ -46,6 +53,47 @@ export default function ProfilePage() {
         </section>
       </div>
     </>
+  )
+}
+
+const ALLOWANCE_OPTIONS = [
+  { value: 'Daily', label: 'Daily', hint: 'What is left, divided by the days left in the month.' },
+  { value: 'Weekly', label: 'Weekly', hint: 'The daily amount for the days left until Sunday.' },
+  { value: 'Monthly', label: 'Monthly', hint: 'Everything left in this month’s budget.' },
+]
+
+// Saved as soon as it changes; the dashboard's allowance card uses the same setting.
+function AllowancePreference() {
+  const { user, updatePreferences } = useAuth()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+
+  async function choose(value) {
+    setBusy(true)
+    try {
+      await updatePreferences({ allowancePeriod: value })
+      toast.success(`Your allowance now shows ${value.toLowerCase()}.`)
+    } catch {
+      toast.error('Your preference could not be saved. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <fieldset className="choice-list" disabled={busy}>
+      <legend className="choice-list__legend">Show my spending allowance</legend>
+      {ALLOWANCE_OPTIONS.map((o) => (
+        <label key={o.value} className="choice">
+          <input type="radio" name="allowance-preference" value={o.value} checked={user.allowancePeriod === o.value} onChange={() => choose(o.value)} />
+          <span>
+            <span className="choice__label">{o.label}</span>
+            <span className="choice__hint">{o.hint}</span>
+          </span>
+        </label>
+      ))}
+      <p className="profile__hint">Your monthly budget is always the limit. Daily and weekly are another way to read it.</p>
+    </fieldset>
   )
 }
 

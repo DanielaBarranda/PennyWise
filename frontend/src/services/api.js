@@ -104,4 +104,29 @@ export const api = {
   createExpense: (expense) => request('/expenses', { method: 'POST', body: expense }),
   updateExpense: (id, expense) => request(`/expenses/${id}`, { method: 'PUT', body: expense }),
   deleteExpense: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
+
+  updatePreferences: (prefs) => request('/auth/preferences', { method: 'PUT', body: prefs }),
+
+  getSavingsGoals: (includeArchived = false) => request('/savings', { query: { includeArchived } }),
+  createSavingsGoal: (goal) => request('/savings', { method: 'POST', body: goal }),
+  updateSavingsGoal: (id, goal) => request(`/savings/${id}`, { method: 'PUT', body: goal }),
+  archiveSavingsGoal: (id) => request(`/savings/${id}/archive`, { method: 'POST' }),
+  restoreSavingsGoal: (id) => request(`/savings/${id}/restore`, { method: 'POST' }),
+  getSavingsTransactions: (id) => request(`/savings/${id}/transactions`),
+  addSavingsTransaction: (id, tx) => request(`/savings/${id}/transactions`, { method: 'POST', body: tx }),
+
+  getBills: (includeArchived = false) => request('/bills', { query: { includeArchived } }),
+  getBillOccurrences: ({ from, to } = {}) => request('/bills/occurrences', { query: { from, to } }),
+  createBill: (bill) => request('/bills', { method: 'POST', body: bill }),
+  updateBill: (id, bill) => request(`/bills/${id}`, { method: 'PUT', body: bill }),
+  archiveBill: (id) => request(`/bills/${id}/archive`, { method: 'POST' }),
+  restoreBill: (id) => request(`/bills/${id}/restore`, { method: 'POST' }),
+  payBill: (id, payment) => request(`/bills/${id}/payments`, { method: 'POST', body: payment }),
+  unpayBill: (id, dueDate) => request(`/bills/${id}/payments/${dueDate}`, { method: 'DELETE' }),
+
+  getInsights: (month) => request('/insights', { query: { month } }),
+  getAllowance: (month, period) => request('/allowance', { query: { month, period } }),
+  getMonthlyReport: (month) => request('/reports/monthly', { query: { month } }),
+  // A plain link: the browser downloads the file with the session cookie.
+  monthlyReportCsvUrl: (month) => `${BASE_URL}/reports/monthly.csv?month=${encodeURIComponent(month)}`,
 }

@@ -51,6 +51,13 @@ export default function AuthProvider({ children }) {
     return me
   }, [])
 
+  // Daily, weekly or monthly allowance view, saved on the account.
+  const updatePreferences = useCallback(async (prefs) => {
+    const me = await api.updatePreferences(prefs)
+    setUser(me)
+    return me
+  }, [])
+
   // The API issues this browser a fresh cookie and signs out every other device.
   const changePassword = useCallback((form) => api.changePassword(form), [])
 
@@ -64,8 +71,8 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, changePassword }),
-    [user, status, notice, login, register, logout, updateProfile, changePassword],
+    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, changePassword }),
+    [user, status, notice, login, register, logout, updateProfile, updatePreferences, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

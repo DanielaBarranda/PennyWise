@@ -12,6 +12,20 @@ public sealed class AppExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
+        if (exception is ValidationFailedException invalid)
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = context,
+                ProblemDetails = new ValidationProblemDetails(new Dictionary<string, string[]> { [invalid.Field] = [invalid.Message] })
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = invalid.Message,
+                },
+            });
+        }
+
         var (status, title) = exception switch
         {
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),

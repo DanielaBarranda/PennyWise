@@ -10,6 +10,10 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+    public DbSet<SavingsTransaction> SavingsTransactions => Set<SavingsTransaction>();
+    public DbSet<Bill> Bills => Set<Bill>();
+    public DbSet<BillPayment> BillPayments => Set<BillPayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +25,43 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.SecurityStamp).HasMaxLength(64).IsRequired();
             entity.HasIndex(u => u.NormalizedEmail).IsUnique();
+            entity.Property(u => u.AllowancePeriod).HasConversion<string>().HasMaxLength(10)
+                .HasDefaultValue(AllowancePeriod.Monthly).HasSentinel((AllowancePeriod)(-1));
+        });
+
+        modelBuilder.Entity<SavingsGoal>(entity =>
+        {
+            entity.Property(g => g.Name).HasMaxLength(80).IsRequired();
+            entity.Property(g => g.Description).HasMaxLength(200);
+            entity.HasIndex(g => g.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(g => g.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(g => g.Transactions).WithOne().HasForeignKey(t => t.GoalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SavingsTransaction>(entity =>
+        {
+            entity.Property(t => t.Type).HasConversion<string>().HasMaxLength(20);
+            entity.Property(t => t.Note).HasMaxLength(120);
+            entity.HasIndex(t => new { t.GoalId, t.Date });
+        });
+
+        modelBuilder.Entity<Bill>(entity =>
+        {
+            entity.Property(b => b.Name).HasMaxLength(80).IsRequired();
+            entity.Property(b => b.Notes).HasMaxLength(200);
+            entity.Property(b => b.Category).HasConversion<string>().HasMaxLength(20);
+            entity.Property(b => b.Frequency).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(b => b.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(b => b.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(b => b.Payments).WithOne().HasForeignKey(p => p.BillId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BillPayment>(entity =>
+        {
+            // One payment per bill occurrence: paying the same due date twice is impossible.
+            entity.HasIndex(p => new { p.BillId, p.DueDate }).IsUnique();
+            // Deleting the linked expense keeps the payment record (it just loses the link).
+            entity.HasOne(p => p.Expense).WithMany().HasForeignKey(p => p.ExpenseId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Expense>(entity =>

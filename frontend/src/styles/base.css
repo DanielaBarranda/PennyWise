@@ -75,6 +75,8 @@
   --danger-hover: #951c13;
   --danger-bg: #fce8e6;
   --danger-line: #f3c1bb;
+  --info: #1f5f8f;
+  --info-bg: #e5eff7;
   /* Solid red buttons keep white text readable (4.5:1) in both themes. */
   --danger-solid: #b42318;
   --danger-solid-hover: #951c13;
@@ -153,6 +155,8 @@
   --danger-hover: #ff8590;
   --danger-bg: rgb(255 107 118 / 12%);
   --danger-line: rgb(255 107 118 / 32%);
+  --info: #8cc2f0;
+  --info-bg: rgb(140 194 240 / 12%);
   --danger-solid: #c62f3e;
   --danger-solid-hover: #ad2532;
   --toast-icon-text: #161215;

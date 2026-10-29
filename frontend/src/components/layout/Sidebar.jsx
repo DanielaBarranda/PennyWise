@@ -6,6 +6,10 @@ import AccountMenu from './AccountMenu.jsx'
 const NAV_ITEMS = [
   { route: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { route: 'expenses', label: 'Expenses', icon: 'receipt' },
+  { route: 'savings', label: 'Savings', icon: 'piggy' },
+  { route: 'bills', label: 'Bills', icon: 'calendar' },
+  { route: 'insights', label: 'Insights', icon: 'spark' },
+  { route: 'reports', label: 'Reports', icon: 'chart' },
 ]
 
 // Matches the breakpoint in layout.css where the sidebar becomes a top bar.

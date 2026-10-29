@@ -42,6 +42,11 @@ builder.Services.AddScoped<LegacyDataClaimer>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<SavingsService>();
+builder.Services.AddScoped<BillService>();
+builder.Services.AddScoped<AllowanceService>();
+builder.Services.AddScoped<InsightService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 // ---------- Sign-in cookie ----------

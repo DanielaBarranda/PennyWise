@@ -151,6 +151,16 @@ public class AuthController(
         return UserResponse.From(user);
     }
 
+    // Display preferences. Changing the allowance view never changes the budget.
+    [HttpPut("preferences")]
+    public async Task<ActionResult<UserResponse>> UpdatePreferences(PreferencesRequest request)
+    {
+        var user = await CurrentUserAsync();
+        user.AllowancePeriod = Enum.Parse<AllowancePeriod>(request.AllowancePeriod!);
+        await db.SaveChangesAsync();
+        return UserResponse.From(user);
+    }
+
     // Needs the current password. A new security stamp signs out every other
     // browser and device; this one gets a fresh cookie and stays signed in.
     [HttpPost("change-password")]

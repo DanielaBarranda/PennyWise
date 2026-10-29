@@ -7,6 +7,10 @@ import SummaryCards from '../components/dashboard/SummaryCards.jsx'
 import SpendingOverview from '../components/dashboard/SpendingOverview.jsx'
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.jsx'
 import RecentTransactions from '../components/dashboard/RecentTransactions.jsx'
+import AllowanceCard from '../components/dashboard/AllowanceCard.jsx'
+import InsightsPreview from '../components/dashboard/InsightsPreview.jsx'
+import UpcomingBills from '../components/dashboard/UpcomingBills.jsx'
+import SavingsPreview from '../components/dashboard/SavingsPreview.jsx'
 import BudgetFormModal from '../components/dashboard/BudgetFormModal.jsx'
 import ExpenseFormModal from '../components/expenses/ExpenseFormModal.jsx'
 import { useAsync } from '../hooks/useAsync.js'
@@ -21,7 +25,10 @@ function greeting() {
 }
 
 export default function DashboardPage({ month, onMonthChange }) {
-  const { data: summary, error, loading, reload } = useAsync(() => api.getDashboardSummary(month), [month])
+  // Bumped after any change, so the summary and every widget below reload together.
+  const [refreshKey, setRefreshKey] = useState(0)
+  const { data: summary, error, loading } = useAsync(() => api.getDashboardSummary(month), [month, refreshKey])
+  const reload = () => setRefreshKey((k) => k + 1)
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
   const categoriesHeadingRef = useRef(null)
@@ -68,9 +75,17 @@ export default function DashboardPage({ month, onMonthChange }) {
         <div className="dashboard" aria-busy={loading}>
           {error && <ErrorState error={error} onRetry={reload} />}
           <SummaryCards summary={current} onSetBudget={() => setBudgetOpen(true)} onShowCategories={showCategories} />
+          <div className="dashboard__columns dashboard__columns--even">
+            <AllowanceCard month={month} refreshKey={refreshKey} />
+            <InsightsPreview month={month} refreshKey={refreshKey} />
+          </div>
           <div className="dashboard__columns">
             <SpendingOverview summary={current} />
             <CategoryBreakdown summary={current} headingRef={categoriesHeadingRef} />
+          </div>
+          <div className="dashboard__columns dashboard__columns--even">
+            <UpcomingBills refreshKey={refreshKey} onPaid={reload} />
+            <SavingsPreview refreshKey={refreshKey} />
           </div>
           <RecentTransactions expenses={current.recentExpenses} onAdd={() => setExpenseOpen(true)} />
         </div>

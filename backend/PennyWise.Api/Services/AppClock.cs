@@ -9,6 +9,8 @@ public sealed class AppClock(IConfiguration configuration, TimeProvider timeProv
 
     public DateTime UtcNow => timeProvider.GetUtcNow().UtcDateTime;
 
-    public string CurrentMonth() =>
-        TimeZoneInfo.ConvertTimeFromUtc(UtcNow, _zone).ToString("yyyy-MM");
+    public string CurrentMonth() => Today().ToString("yyyy-MM");
+
+    // Today's date on the user's calendar (Manila), used for due dates and days left.
+    public DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(UtcNow, _zone));
 }

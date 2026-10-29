@@ -41,6 +41,22 @@ public sealed class CategoryNameAttribute : ValidationAttribute
     }
 }
 
+// A calendar date within the years 2000-2099 (the range months are accepted in).
+public sealed class ValidDateAttribute : ValidationAttribute
+{
+    private static readonly DateOnly Min = new(2000, 1, 1);
+    private static readonly DateOnly Max = new(2099, 12, 31);
+
+    protected override ValidationResult? IsValid(object? value, ValidationContext context)
+    {
+        if (value is DateOnly date && (date < Min || date > Max))
+        {
+            return new ValidationResult($"{context.DisplayName} must be between the years 2000 and 2099.", [context.MemberName!]);
+        }
+        return ValidationResult.Success;
+    }
+}
+
 // A month written as "YYYY-MM".
 public sealed class MonthAttribute : ValidationAttribute
 {

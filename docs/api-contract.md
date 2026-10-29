@@ -45,19 +45,22 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 - **Session:** signing in sets the cookie `pennywise_session` (HttpOnly, SameSite=Strict,
   Secure in production, 7 days, renewed while in use). The browser sends it automatically;
   JavaScript cannot read it.
-- **Ownership:** budgets and expenses belong to the signed-in user. The user is taken from
+- **Ownership:** budgets, expenses, savings goals and bills belong to the signed-in user. The user is taken from
   the cookie on the server, never from the request; a `userId` sent in a body is ignored.
 - **CSRF protection:** `POST`, `PUT` and `DELETE` requests must include the header
   `X-PennyWise-Client: web` (the web app always sends it).
 
 | Method | Route | Body | Success |
 |---|---|---|---|
-| POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `{ id, name, email, memberSince }`, signed in |
-| POST | `/api/auth/login` | `{ email, password }` | 200 `{ id, name, email, memberSince }`, signed in |
+| POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `User`, signed in |
+| POST | `/api/auth/login` | `{ email, password }` | 200 `User`, signed in |
 | POST | `/api/auth/logout` | | 204, cookie removed |
-| GET | `/api/auth/me` | | 200 `{ id, name, email, memberSince }`, or 204 when nobody is signed in |
-| PUT | `/api/auth/profile` | `{ name }` | 200 `{ id, name, email, memberSince }` (the email cannot be changed) |
+| GET | `/api/auth/me` | | 200 `User`, or 204 when nobody is signed in |
+| PUT | `/api/auth/profile` | `{ name }` | 200 `User` (the email cannot be changed) |
+| PUT | `/api/auth/preferences` | `{ allowancePeriod }` (`Daily`, `Weekly` or `Monthly`) | 200 User |
 | POST | `/api/auth/change-password` | `{ currentPassword, newPassword, confirmPassword }` | 204; this browser stays signed in, every other device is signed out |
+
+User is `{ id, name, email, memberSince, allowancePeriod }`.
 
 Rules: name 1–80 characters; a valid email up to 254 characters, unique ignoring case and
 spaces; password 8–128 characters with at least one letter and one number; a wrong email
@@ -123,6 +126,74 @@ Validation: each category can appear at most once in `categoryLimits`, and all t
 | DELETE | `/api/expenses/{id}` | | 204 |
 
 Validation: `description` is required, is trimmed, and is at most 200 characters.
+
+### Savings goals
+A goal's saved amount is always worked out from its deposits and withdrawals; it is never
+stored or typed in. Saving does not count as spending.
+
+| Method | Route | Body | Success |
+|---|---|---|---|
+| GET | `/api/savings?includeArchived=false` | | 200, array of Goal |
+| GET | `/api/savings/{id}` | | 200 Goal, or 404 |
+| POST | `/api/savings` | `{ name, description?, targetAmount, targetDate? }` | 201 Goal |
+| PUT | `/api/savings/{id}` | same as POST | 200 Goal |
+| POST | `/api/savings/{id}/archive` · `/restore` | | 200 Goal |
+| GET | `/api/savings/{id}/transactions` | | 200, array, newest first |
+| POST | `/api/savings/{id}/transactions` | `{ type: "Contribution" \| "Withdrawal", amount, date, note? }` | 201 |
+
+Goal: `{ id, name, description, targetAmount, savedAmount, remainingAmount, percentSaved,
+targetDate, daysLeft, expectedByToday, status: "Active" | "Completed" | "Archived", createdAt }`.
+Rules: a new target date cannot be in the past; transactions cannot be dated in the future;
+a withdrawal cannot exceed the saved amount; archived goals accept no transactions.
+
+### Bills
+A bill is a schedule (`OneTime`, `Weekly`, `Monthly` or `Yearly`), so its due dates are
+generated, never duplicated. A monthly bill due on the 31st falls on the last day of
+shorter months. Due dates before the bill was added are not treated as owed.
+
+| Method | Route | Body | Success |
+|---|---|---|---|
+| GET | `/api/bills?includeArchived=false` | | 200, array of Bill |
+| GET | `/api/bills/{id}` | | 200 Bill, or 404 |
+| GET | `/api/bills/occurrences?from=YYYY-MM-DD&to=YYYY-MM-DD` | | 200, due dates in the range (default: 1st of this month to 60 days ahead) |
+| POST | `/api/bills` | `{ name, amount, category, frequency, firstDueDate, endDate?, notes? }` | 201 Bill |
+| PUT | `/api/bills/{id}` | same as POST | 200 Bill |
+| POST | `/api/bills/{id}/archive` · `/restore` | | 200 Bill |
+| POST | `/api/bills/{id}/payments` | `{ dueDate, paidOn?, recordExpense = true }` | 200; 409 if that due date is already paid |
+| DELETE | `/api/bills/{id}/payments/{dueDate}` | | 204; also deletes the linked expense |
+
+Occurrence: `{ billId, name, amount, category, frequency, dueDate, status: "Paid" | "Overdue" |
+"DueSoon" | "Upcoming", daysUntilDue, paidOn, paidAmount, expenseId }`. "Due soon" means within
+7 days. Paying with `recordExpense` creates exactly one linked expense. Reminders are shown in
+the app only; no email or push notifications are sent.
+
+### Allowance
+`GET /api/allowance?month=YYYY-MM&period=Daily|Weekly|Monthly` (period defaults to the saved preference)
+
+```json
+{ "month": "2026-10", "period": "Daily", "status": "Available", "budget": 10000, "spent": 1749,
+  "reservedForBills": 599, "available": 7652, "daysLeft": 3, "daysLeftInWeek": 3,
+  "amount": 2550.66, "daily": 2550.66, "weekly": 7651.98, "monthly": 7652 }
+```
+
+`available = budget − spent − unpaid bills due this month` (overdue ones included). Daily is
+what is left divided by the days left (today included, Manila time), rounded down to the
+centavo; weekly is daily × days left until Sunday; monthly is everything left. `status` is
+`Available`, `OverBudget`, `MonthEnded` or `NoBudget`.
+
+### Insights
+`GET /api/insights?month=YYYY-MM` returns rule-based notes, most urgent first:
+`{ key, severity: "Critical" | "Warning" | "Success" | "Info", kind: "Fact" | "Suggestion",
+title, message, link, dismissible }`. Critical ones (overdue bills, budget exceeded) cannot be
+dismissed. Dismissals are remembered in the browser, per account.
+
+### Monthly report
+- `GET /api/reports/monthly?month=YYYY-MM`: budget, total spent, comparison with the
+  previous month, categories, savings, bills, insights and notes.
+- `GET /api/reports/monthly.csv?month=YYYY-MM`: the same report as a CSV download (UTF-8).
+
+Paid bills recorded as expenses are counted once, in spending. Income is not recorded in
+PennyWise, so the report shows no income or net cash flow.
 
 ### Health
 `GET /api/health` returns `200 { "status": "ok" }`. Milestone 7 uses it to show
