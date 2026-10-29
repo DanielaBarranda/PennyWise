@@ -1,5 +1,7 @@
 import Icon from '../common/Icon.jsx'
-import { formatPercent, formatPeso } from '../../utils/format.js'
+import { useAuth } from '../../hooks/useAuth.js'
+import { PERIOD_WORDS, fromMonthly } from '../../utils/budgetPeriod.js'
+import { formatMonth, formatPercent, formatPeso } from '../../utils/format.js'
 
 // The overall status comes from the API; it is written out as well as colored.
 const STATUS = {
@@ -26,7 +28,20 @@ function StatCard({ icon, tone, label, value, children }) {
 // Four cards: budget, spent, remaining, and what needs attention. Every number
 // comes straight from GET /api/dashboard/summary.
 export default function SummaryCards({ summary, onSetBudget, onShowCategories }) {
+  const { user } = useAuth()
   const budget = summary.budget
+  // Shown in the period the budget was set in (day, week or month); it is saved monthly.
+  const period = user.allowancePeriod ?? 'Monthly'
+  const budgetValue = !budget
+    ? 'Not set'
+    : period === 'Monthly'
+      ? formatPeso(budget.amount)
+      : (
+          <>
+            {formatPeso(fromMonthly(budget.amount, period, summary.month))}
+            <span className="stat__unit"> {PERIOD_WORDS[period]}</span>
+          </>
+        )
   const status = budget ? STATUS[summary.status] : null
   const percent = Number(summary.percentSpent ?? 0)
   const over = budget && summary.remaining < 0
@@ -36,8 +51,12 @@ export default function SummaryCards({ summary, onSetBudget, onShowCategories })
 
   return (
     <section className="stats" aria-label="Month summary">
-      <StatCard icon="target" tone="primary" label="Total budget" value={budget ? formatPeso(budget.amount) : 'Not set'}>
-        {budget ? 'For this month' : 'Set one to track what is left'}
+      <StatCard icon="target" tone="primary" label="Total budget" value={budgetValue}>
+        {!budget
+          ? 'Set one to track what is left'
+          : period === 'Monthly'
+            ? 'For this month'
+            : `${formatPeso(budget.amount)} for ${formatMonth(summary.month)}`}
       </StatCard>
 
       <StatCard icon="spent" tone="gold" label="Total spent" value={formatPeso(summary.totalSpent)}>

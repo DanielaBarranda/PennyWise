@@ -62,7 +62,8 @@ const ALLOWANCE_OPTIONS = [
   { value: 'Monthly', label: 'Monthly', hint: 'Everything left in this month’s budget.' },
 ]
 
-// Saved as soon as it changes; the dashboard's allowance card uses the same setting.
+// Saved as soon as it changes; the budget form and the dashboard's budget and
+// allowance cards all use this setting.
 function AllowancePreference() {
   const { user, updatePreferences } = useAuth()
   const toast = useToast()
@@ -72,7 +73,7 @@ function AllowancePreference() {
     setBusy(true)
     try {
       await updatePreferences({ allowancePeriod: value })
-      toast.success(`Your allowance now shows ${value.toLowerCase()}.`)
+      toast.success(`Your budget and allowance now show ${value.toLowerCase()}.`)
     } catch {
       toast.error('Your preference could not be saved. Please try again.')
     } finally {
@@ -82,7 +83,7 @@ function AllowancePreference() {
 
   return (
     <fieldset className="choice-list" disabled={busy}>
-      <legend className="choice-list__legend">Show my spending allowance</legend>
+      <legend className="choice-list__legend">Budget and allowance period</legend>
       {ALLOWANCE_OPTIONS.map((o) => (
         <label key={o.value} className="choice">
           <input type="radio" name="allowance-preference" value={o.value} checked={user.allowancePeriod === o.value} onChange={() => choose(o.value)} />
@@ -92,7 +93,9 @@ function AllowancePreference() {
           </span>
         </label>
       ))}
-      <p className="profile__hint">Your monthly budget is always the limit. Daily and weekly are another way to read it.</p>
+      <p className="profile__hint">
+        Your budget is entered and shown in this period, and saved as a monthly amount, so reports stay monthly.
+      </p>
     </fieldset>
   )
 }

@@ -29,9 +29,9 @@ export function validateExpense(form) {
   return errors
 }
 
-export function validateBudget(form) {
+export function validateBudget(form, label = 'Monthly budget') {
   const errors = {}
-  const amountError = validateAmount(form.amount, { label: 'Monthly budget' })
+  const amountError = validateAmount(form.amount, { label })
   if (amountError) errors.amount = amountError
 
   let limitTotal = 0
@@ -42,7 +42,7 @@ export function validateBudget(form) {
     else if (raw) limitTotal += Number(raw)
   }
   if (!errors.amount && limitTotal > Number(form.amount)) {
-    errors.categoryLimits = 'Category limits add up to more than the monthly budget.'
+    errors.categoryLimits = `Category limits add up to more than the ${label.toLowerCase()}.`
   }
   return errors
 }

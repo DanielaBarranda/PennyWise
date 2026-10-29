@@ -780,3 +780,50 @@
     overflow: visible;
   }
 }
+
+/* ================= Budget period in the budget form ================= */
+.segmented--block {
+  align-self: flex-start;
+}
+
+.budget-period__total {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-period__total strong {
+  color: var(--text);
+}
+
+.budget-period__unit {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+@media (max-width: 520px) {
+  .segmented--block {
+    display: flex;
+    align-self: stretch;
+  }
+
+  .segmented--block .segmented__option {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.stat__unit {
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.allowance__plan {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
