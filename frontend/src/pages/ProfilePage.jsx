@@ -20,46 +20,49 @@ export default function ProfilePage() {
     <>
       <PageHeader title="Profile" subtitle="Your account details, preferences and password." />
       <div className="profile">
-        <section className="card" aria-labelledby="account-heading">
-          <div className="profile__identity">
-            <Avatar user={user} size="xl" />
-            <div>
-              <h2 id="account-heading">{user.name}</h2>
-              <p className="profile__meta">{user.email}</p>
-              {user.memberSince && <p className="profile__meta">Member since {formatDate(user.memberSince)}</p>}
-              <PhotoControls />
+        <div className="profile__column">
+          <section className="card" aria-labelledby="account-heading">
+            <div className="profile__identity">
+              <Avatar user={user} size="xl" />
+              <div>
+                <h2 id="account-heading">{user.name}</h2>
+                <p className="profile__meta">{user.email}</p>
+                {user.memberSince && <p className="profile__meta">Member since {formatDate(user.memberSince)}</p>}
+                <PhotoControls />
+              </div>
             </div>
-          </div>
-          <NameForm />
-          <div className="profile__signout">
-            <button type="button" className="button button--secondary" onClick={logout}>
-              <Icon name="logout" />
-              Log out
-            </button>
-          </div>
-        </section>
+            <NameForm />
+            <div className="profile__signout">
+              <button type="button" className="button button--secondary" onClick={logout}>
+                <Icon name="logout" />
+                Log out
+              </button>
+            </div>
+          </section>
 
-        <section className="card" aria-labelledby="preferences-heading">
-          <div className="card__header">
-            <h2 id="preferences-heading">Preferences</h2>
-          </div>
-          <AllowancePreference />
-        </section>
+          <section className="card" aria-labelledby="password-heading">
+            <div className="card__header">
+              <h2 id="password-heading">Change password</h2>
+            </div>
+            <p className="profile__hint">For your security, other devices will be logged out after you change it.</p>
+            <PasswordForm />
+          </section>
+        </div>
+        <div className="profile__column">
+          <section className="card" aria-labelledby="preferences-heading">
+            <div className="card__header">
+              <h2 id="preferences-heading">Preferences</h2>
+            </div>
+            <AllowancePreference />
+          </section>
 
-        <section className="card" aria-labelledby="password-heading">
-          <div className="card__header">
-            <h2 id="password-heading">Change password</h2>
-          </div>
-          <p className="profile__hint">For your security, other devices will be logged out after you change it.</p>
-          <PasswordForm />
-        </section>
-
-        <section className="card profile__danger" aria-labelledby="delete-heading">
-          <div className="card__header">
-            <h2 id="delete-heading">Delete account</h2>
-          </div>
-          <DeleteAccount />
-        </section>
+          <section className="card profile__danger" aria-labelledby="delete-heading">
+            <div className="card__header">
+              <h2 id="delete-heading">Delete account</h2>
+            </div>
+            <DeleteAccount />
+          </section>
+        </div>
       </div>
     </>
   )

@@ -899,3 +899,12 @@
 .delete-list li + li {
   margin-top: 4px;
 }
+
+/* Each Profile column stacks its own cards, so Delete account sits right under
+   Preferences instead of waiting for the taller account card beside it. */
+.profile__column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
