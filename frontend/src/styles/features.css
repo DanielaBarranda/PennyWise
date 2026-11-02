@@ -1010,6 +1010,12 @@
   min-height: 44px;
 }
 
+/* Google's frame is a light page; in our dark theme the browser would paint
+   it an opaque white box unless the frame element uses the same scheme. */
+.google-signin__button iframe {
+  color-scheme: light;
+}
+
 .google-signin--disabled {
   pointer-events: none;
   opacity: 0.6;
