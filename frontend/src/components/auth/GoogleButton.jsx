@@ -31,23 +31,12 @@ function loadGoogle() {
   return setup
 }
 
-function useTheme() {
-  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme)
-  useEffect(() => {
-    const observer = new MutationObserver(() => setTheme(document.documentElement.dataset.theme))
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-    return () => observer.disconnect()
-  }, [])
-  return theme
-}
-
 // `text` is Google's wording: 'continue_with', 'signup_with' or 'signin_with'.
 // `divider` adds an "or" line under the button, before the email form.
 export default function GoogleButton({ onCredential, text = 'continue_with', divider = false, disabled = false }) {
   const containerRef = useRef(null)
   const callbackRef = useRef(onCredential)
   const [clientId, setClientId] = useState(null)
-  const theme = useTheme()
 
   useEffect(() => {
     callbackRef.current = onCredential
@@ -74,7 +63,9 @@ export default function GoogleButton({ onCredential, text = 'continue_with', div
     })
     google.renderButton(container, {
       type: 'standard',
-      theme: theme === 'light' ? 'outline' : 'filled_black',
+      // The white "outline" style in both themes: the dark style puts the G in a
+      // white circle that crowds the edge of the button.
+      theme: 'outline',
       size: 'large',
       shape: 'pill',
       text,
@@ -83,7 +74,7 @@ export default function GoogleButton({ onCredential, text = 'continue_with', div
       // Google draws the button at a fixed width (200–400px).
       width: Math.max(200, Math.min(400, Math.floor(container.getBoundingClientRect().width))),
     })
-  }, [clientId, theme, text])
+  }, [clientId, text])
 
   if (!clientId) return null
 
