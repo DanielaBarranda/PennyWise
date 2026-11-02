@@ -8,7 +8,7 @@ const RADIUS = (SIZE - STROKE) / 2
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const GAP = 3 // px of empty ring between segments
 
-// A donut of this month's spending by category, drawn with plain SVG. The legend
+// A donut of the period's spending by category, drawn with plain SVG. The legend
 // beside it lists the same amounts and percentages as text, so the chart is
 // decorative for screen readers.
 export default function SpendingOverview({ summary }) {

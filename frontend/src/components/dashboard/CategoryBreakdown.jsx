@@ -12,7 +12,7 @@ const STATUS_BADGE = {
 }
 
 // Progress per category. With a limit, the bar shows how much of the limit is
-// used; without one, it shows the category's share of the month's spending.
+// used; without one, it shows the category's share of the period's spending.
 // Every value on a bar is also written out as text.
 // `headingRef` lets the summary card's "View details" button move focus here.
 export default function CategoryBreakdown({ summary, headingRef }) {

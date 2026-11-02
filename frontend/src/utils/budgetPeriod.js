@@ -1,40 +1,63 @@
-// A budget can be typed per day, week or month, but it is always saved as a
-// monthly amount, so reports, limits and insights only ever see one unit.
+// Budget periods: a day, a week (Monday to Sunday) or a calendar month. Each
+// period has its own budget; nothing is ever converted between periods.
+// Dates are "YYYY-MM-DD" strings, built from parts so time zones never shift them.
 
 export const PERIODS = ['Daily', 'Weekly', 'Monthly']
-export const PERIOD_WORDS = { Daily: 'a day', Weekly: 'a week', Monthly: 'a month' }
-export const PERIOD_BUDGET_LABELS = { Daily: 'Daily budget', Weekly: 'Weekly budget', Monthly: 'Monthly budget' }
-export const PERIOD_HINTS = {
-  Daily: 'The most you plan to spend each day.',
-  Weekly: 'The most you plan to spend each week.',
-  Monthly: 'The most you plan to spend this month.',
+export const PERIOD_UNIT = { Daily: 'day', Weekly: 'week', Monthly: 'month' }
+export const THIS_PERIOD = { Daily: 'today', Weekly: 'this week', Monthly: 'this month' }
+
+const pad = (n) => String(n).padStart(2, '0')
+const toIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const fromIso = (iso) => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
-export function daysInMonth(month) {
-  const [year, monthNumber] = month.split('-').map(Number)
-  return new Date(year, monthNumber, 0).getDate()
+// The first day of the period containing `iso`: the day, its Monday, or the 1st.
+export function periodStart(period, iso) {
+  const d = fromIso(iso)
+  if (period === 'Weekly') d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  if (period === 'Monthly') d.setDate(1)
+  return toIso(d)
 }
 
-// How many of `period` fit in the month: 31 days, or 31/7 weeks, or 1 month.
-function factor(period, month) {
-  if (period === 'Daily') return daysInMonth(month)
-  if (period === 'Weekly') return daysInMonth(month) / 7
-  return 1
+export function periodEnd(period, start) {
+  const d = fromIso(start)
+  if (period === 'Weekly') d.setDate(d.getDate() + 6)
+  if (period === 'Monthly') d.setMonth(d.getMonth() + 1, 0)
+  return toIso(d)
 }
 
-// In centavos. Category limits round down, so limits that fit the budget in
-// the typed period still fit it once both are converted.
-export function toMonthlyCents(amount, period, month, { roundDown = false } = {}) {
-  const exact = Math.round(Number(amount) * 100) * factor(period, month)
-  // The small nudge stops values like 4428.5699999 from losing a centavo.
-  return roundDown ? Math.floor(exact + 1e-6) : Math.round(exact)
+// One period earlier (-1) or later (+1).
+export function shiftPeriod(period, start, delta) {
+  const d = fromIso(start)
+  if (period === 'Daily') d.setDate(d.getDate() + delta)
+  if (period === 'Weekly') d.setDate(d.getDate() + 7 * delta)
+  if (period === 'Monthly') d.setMonth(d.getMonth() + delta, 1)
+  return toIso(d)
 }
 
-export const toMonthly = (amount, period, month, options) => toMonthlyCents(amount, period, month, options) / 100
+const fmt = (iso, options) => fromIso(iso).toLocaleDateString('en-PH', options)
 
-export function fromMonthly(monthly, period, month) {
-  return Math.round((Number(monthly) * 100) / factor(period, month)) / 100
+// "November 2026", "Nov 2 – 8, 2026", "Oct 26 – Nov 1, 2026" or "Mon, Nov 2, 2026".
+export function periodLabel(period, start) {
+  if (period === 'Monthly') return fmt(start, { month: 'long', year: 'numeric' })
+  if (period === 'Daily') return fmt(start, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  const end = periodEnd(period, start)
+  const sameYear = start.slice(0, 4) === end.slice(0, 4)
+  const sameMonth = sameYear && start.slice(5, 7) === end.slice(5, 7)
+  const from = fmt(start, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' })
+  // Built by hand: Intl formats "day + year" without a month oddly ("2026 (day: 8)").
+  const to = sameMonth ? `${Number(end.slice(8, 10))}, ${end.slice(0, 4)}` : fmt(end, { month: 'short', day: 'numeric', year: 'numeric' })
+  return `${from} – ${to}`
 }
 
-// For prefilling an input: "150", "1050.5", never "150.00000001".
-export const amountText = (value) => String(Number(value.toFixed(2)))
+// The API query for a period: ?month= for a month, ?period=&date= otherwise.
+export function periodQuery(period, start) {
+  return period === 'Monthly' ? { month: start.slice(0, 7) } : { period, date: start }
+}
+
+// "October 2026 budget", "budget for Nov 2 – 8, 2026" or "budget for Mon, Nov 2, 2026".
+export function budgetName(period, start) {
+  return period === 'Monthly' ? `${periodLabel(period, start)} budget` : `budget for ${periodLabel(period, start)}`
+}

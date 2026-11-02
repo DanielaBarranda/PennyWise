@@ -153,12 +153,13 @@ public class AuthController(
         return UserResponse.From(user);
     }
 
-    // Display preferences. Changing the allowance view never changes the budget.
+    // Whether the dashboard works with daily, weekly or monthly budgets. Budgets
+    // already set for other periods are kept and come back if the user switches back.
     [HttpPut("preferences")]
     public async Task<ActionResult<UserResponse>> UpdatePreferences(PreferencesRequest request)
     {
         var user = await CurrentUserAsync();
-        user.AllowancePeriod = Enum.Parse<AllowancePeriod>(request.AllowancePeriod!);
+        user.BudgetPeriod = Enum.Parse<BudgetPeriod>(request.BudgetPeriod!);
         await db.SaveChangesAsync();
         return UserResponse.From(user);
     }

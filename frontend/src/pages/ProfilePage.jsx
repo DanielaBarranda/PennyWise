@@ -230,13 +230,13 @@ function DeleteAccountForm({ onCancel, onBusyChange }) {
 }
 
 const ALLOWANCE_OPTIONS = [
-  { value: 'Daily', label: 'Daily', hint: 'What is left, divided by the days left in the month.' },
-  { value: 'Weekly', label: 'Weekly', hint: 'The daily amount for the days left until Sunday.' },
-  { value: 'Monthly', label: 'Monthly', hint: 'Everything left in this month’s budget.' },
+  { value: 'Daily', label: 'Daily', hint: 'Set a budget for each day. The dashboard shows one day at a time.' },
+  { value: 'Weekly', label: 'Weekly', hint: 'Set a budget for each week, Monday to Sunday. The dashboard shows one week at a time.' },
+  { value: 'Monthly', label: 'Monthly', hint: 'Set a budget for each month. The dashboard shows one month at a time.' },
 ]
 
-// Saved as soon as it changes; the budget form and the dashboard's budget and
-// allowance cards all use this setting.
+// Saved as soon as it changes. The dashboard and insights use the same setting
+// (they also have a Daily / Weekly / Monthly switch).
 function AllowancePreference() {
   const { user, updatePreferences } = useAuth()
   const toast = useToast()
@@ -245,10 +245,10 @@ function AllowancePreference() {
   async function choose(value) {
     setBusy(true)
     try {
-      await updatePreferences({ allowancePeriod: value })
-      toast.success(`Your budget and allowance now show ${value.toLowerCase()}.`)
+      await updatePreferences({ budgetPeriod: value })
+      toast.success(`You’re now using ${value.toLowerCase()} budgets.`)
     } catch {
-      toast.error('Your preference could not be saved. Please try again.')
+      toast.error('Your budget period could not be changed. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -256,10 +256,10 @@ function AllowancePreference() {
 
   return (
     <fieldset className="choice-list" disabled={busy}>
-      <legend className="choice-list__legend">Budget and allowance period</legend>
+      <legend className="choice-list__legend">Budget period</legend>
       {ALLOWANCE_OPTIONS.map((o) => (
         <label key={o.value} className="choice">
-          <input type="radio" name="allowance-preference" value={o.value} checked={user.allowancePeriod === o.value} onChange={() => choose(o.value)} />
+          <input type="radio" name="allowance-preference" value={o.value} checked={user.budgetPeriod === o.value} onChange={() => choose(o.value)} />
           <span>
             <span className="choice__label">{o.label}</span>
             <span className="choice__hint">{o.hint}</span>
@@ -267,7 +267,7 @@ function AllowancePreference() {
         </label>
       ))}
       <p className="profile__hint">
-        Your budget is entered and shown in this period, and saved as a monthly amount, so reports stay monthly.
+        Each period has its own budget; nothing is converted between them. Budgets you set for another period are kept.
       </p>
     </fieldset>
   )

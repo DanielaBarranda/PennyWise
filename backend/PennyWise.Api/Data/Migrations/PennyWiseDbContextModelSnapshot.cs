@@ -121,6 +121,16 @@ namespace PennyWise.Api.Data.Migrations
                         .HasMaxLength(7)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Monthly");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -129,7 +139,9 @@ namespace PennyWise.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Month")
+                    b.HasIndex("UserId", "Month");
+
+                    b.HasIndex("UserId", "Period", "StartDate")
                         .IsUnique();
 
                     b.ToTable("Budgets");
@@ -278,15 +290,16 @@ namespace PennyWise.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("AllowancePeriod")
+                    b.Property<DateTime?>("AvatarUpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BudgetPeriod")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("Monthly");
-
-                    b.Property<DateTime?>("AvatarUpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasDefaultValue("Monthly")
+                        .HasColumnName("AllowancePeriod");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");

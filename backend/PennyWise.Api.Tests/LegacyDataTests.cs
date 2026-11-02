@@ -19,7 +19,7 @@ public class LegacyDataTests() : ApiTestBase(new Dictionary<string, string> { ["
         var now = DateTime.UtcNow;
         db.Budgets.Add(new Budget
         {
-            Month = "2026-10", Amount = 4000, CreatedAt = now, UpdatedAt = now,
+            Month = "2026-10", StartDate = new DateOnly(2026, 10, 1), Amount = 4000, CreatedAt = now, UpdatedAt = now,
             CategoryLimits = [new CategoryLimit { Category = Category.Food, Amount = 1500 }],
         });
         db.Expenses.Add(new Expense { Amount = 250, Category = Category.Food, Description = "Old lunch", ExpenseDate = new DateOnly(2026, 10, 2), CreatedAt = now, UpdatedAt = now });
@@ -58,7 +58,7 @@ public class LegacyDataTests() : ApiTestBase(new Dictionary<string, string> { ["
         // (Registration already claimed the old budget; recreate the conflict explicitly.)
         var mine = db.Budgets.Single();
         mine.UserId = null;
-        db.Budgets.Add(new Budget { UserId = db.Users.Single().Id, Month = "2026-10", Amount = 7000, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
+        db.Budgets.Add(new Budget { UserId = db.Users.Single().Id, Month = "2026-10", StartDate = new DateOnly(2026, 10, 1), Amount = 7000, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
         await db.SaveChangesAsync();
 
         (await owner.PostAsync("/api/auth/logout", null)).EnsureSuccessStatusCode();

@@ -4,13 +4,15 @@ import { useAsync } from '../../hooks/useAsync.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useDismissedInsights } from '../../hooks/useDismissedInsights.js'
 import { api } from '../../services/api.js'
+import { periodQuery } from '../../utils/budgetPeriod.js'
 
-// The three most important insights for the month; the rest are on the Insights page.
-export default function InsightsPreview({ month, refreshKey }) {
+// The three most important insights for the period; the rest are on the Insights page.
+export default function InsightsPreview({ period, start, refreshKey }) {
   const { user } = useAuth()
   const [dismissed, dismiss] = useDismissedInsights(user.id)
-  const { data, error, reload } = useAsync(() => api.getInsights(month).then((list) => ({ month, list })), [month, refreshKey])
-  const current = data?.month === month ? data.list : null
+  const key = `${period}-${start}`
+  const { data, error, reload } = useAsync(() => api.getInsights(periodQuery(period, start)).then((list) => ({ key, list })), [key, refreshKey])
+  const current = data?.key === key ? data.list : null
   const visible = current?.filter((i) => !dismissed.has(i.key))
 
   return (

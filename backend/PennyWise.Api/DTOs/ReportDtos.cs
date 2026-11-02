@@ -15,6 +15,7 @@ public record MonthlyReportResponse(
     List<ReportCategory> Categories,
     ReportSavings Savings,
     ReportBills Bills,
+    List<ReportPeriodBudget> PeriodBudgets, // weekly and daily budgets starting this month
     List<InsightResponse> Insights,
     List<string> Notes);
 
@@ -23,6 +24,8 @@ public record ReportCategory(string Category, decimal Total, decimal SharePercen
 public record ReportSavings(decimal Contributions, decimal Withdrawals, decimal Net, List<ReportGoal> Goals);
 
 public record ReportGoal(string Name, decimal TargetAmount, decimal SavedAtMonthEnd, decimal PercentAtMonthEnd, decimal ContributedThisMonth, decimal WithdrawnThisMonth);
+
+public record ReportPeriodBudget(string Period, DateOnly Start, DateOnly End, decimal Amount, decimal Spent);
 
 public record ReportBills(int Due, int Paid, int Unpaid, decimal PaidAmount, decimal UnpaidAmount, List<ReportBill> Items);
 

@@ -26,8 +26,8 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.SecurityStamp).HasMaxLength(64).IsRequired();
             entity.HasIndex(u => u.NormalizedEmail).IsUnique();
-            entity.Property(u => u.AllowancePeriod).HasConversion<string>().HasMaxLength(10)
-                .HasDefaultValue(AllowancePeriod.Monthly).HasSentinel((AllowancePeriod)(-1));
+            entity.Property(u => u.BudgetPeriod).HasColumnName("AllowancePeriod").HasConversion<string>().HasMaxLength(10)
+                .HasDefaultValue(BudgetPeriod.Monthly).HasSentinel((BudgetPeriod)(-1));
         });
 
         modelBuilder.Entity<UserAvatar>(entity =>
@@ -85,8 +85,12 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
         modelBuilder.Entity<Budget>(entity =>
         {
             entity.Property(b => b.Month).HasMaxLength(7).IsRequired();
-            // One budget per month per user; different users can budget the same month.
-            entity.HasIndex(b => new { b.UserId, b.Month }).IsUnique();
+            entity.Property(b => b.Period).HasConversion<string>().HasMaxLength(10)
+                .HasDefaultValue(BudgetPeriod.Monthly).HasSentinel((BudgetPeriod)(-1));
+            // One budget per period per user (e.g. one for the week of Nov 2); different
+            // users can budget the same period.
+            entity.HasIndex(b => new { b.UserId, b.Period, b.StartDate }).IsUnique();
+            entity.HasIndex(b => new { b.UserId, b.Month });
             entity.HasOne<User>().WithMany().HasForeignKey(b => b.UserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(b => b.CategoryLimits)
                 .WithOne()

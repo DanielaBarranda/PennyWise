@@ -16,16 +16,17 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
     public const decimal WarningPercent = 80m;
     private const int RecentCount = 5;
 
-    public async Task<DashboardSummaryResponse> GetSummaryAsync(string month)
+    // One period only: its own budget and the expenses dated inside it.
+    public async Task<DashboardSummaryResponse> GetSummaryAsync(BudgetWindow window)
     {
-        var (first, last) = MonthKey.Range(month);
+        var (first, last) = (window.Start, window.End);
         var userId = currentUser.Id;
 
         var budget = await db.Budgets.AsNoTracking()
             .Include(b => b.CategoryLimits)
-            .FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
+            .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start);
 
-        // SQLite cannot SUM decimal columns exactly, so the month's expenses are
+        // SQLite cannot SUM decimal columns exactly, so the period's expenses are
         // loaded and added up in C# with decimal arithmetic. One person's month
         // of expenses is small, so this is fast.
         var expenses = await db.Expenses.AsNoTracking()
@@ -50,7 +51,10 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             .ToList();
 
         return new DashboardSummaryResponse(
-            Month: month,
+            Period: window.Period.ToString(),
+            Start: window.Start,
+            End: window.End,
+            Month: window.Month,
             Budget: budget is null ? null : BudgetResponse.From(budget),
             TotalSpent: totalSpent,
             Remaining: budget is null ? null : budget.Amount - totalSpent,

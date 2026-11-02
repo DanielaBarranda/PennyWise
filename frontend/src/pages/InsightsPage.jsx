@@ -1,18 +1,21 @@
 import PageHeader from '../components/common/PageHeader.jsx'
-import MonthPicker from '../components/common/MonthPicker.jsx'
+import PeriodPicker from '../components/common/PeriodPicker.jsx'
+import PeriodSwitch from '../components/common/PeriodSwitch.jsx'
 import { EmptyState, ErrorState, LoadingState } from '../components/common/States.jsx'
 import InsightList from '../components/insights/InsightList.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useDismissedInsights } from '../hooks/useDismissedInsights.js'
 import { api } from '../services/api.js'
-import { formatMonth } from '../utils/format.js'
+import { periodLabel, periodQuery } from '../utils/budgetPeriod.js'
 
-export default function InsightsPage({ month, onMonthChange }) {
+// Insights for the selected budget period (day, week or month).
+export default function InsightsPage({ period, start, onStartChange }) {
   const { user } = useAuth()
-  const { data, error, reload } = useAsync(() => api.getInsights(month).then((list) => ({ month, list })), [month])
+  const key = `${period}-${start}`
+  const { data, error, reload } = useAsync(() => api.getInsights(periodQuery(period, start)).then((list) => ({ key, list })), [key])
   const [dismissed, dismiss] = useDismissedInsights(user.id)
-  const current = data?.month === month ? data.list : null
+  const current = data?.key === key ? data.list : null
   const visible = current?.filter((i) => !dismissed.has(i.key))
   const hiddenCount = current ? current.length - visible.length : 0
 
@@ -21,11 +24,16 @@ export default function InsightsPage({ month, onMonthChange }) {
       <PageHeader
         title="Insights"
         subtitle="Notes worked out from your own budget, expenses, bills and savings."
-        controls={<MonthPicker month={month} onChange={onMonthChange} />}
+        controls={
+          <>
+            <PeriodSwitch />
+            <PeriodPicker period={period} start={start} onChange={onStartChange} />
+          </>
+        }
       />
       <section className="card" aria-labelledby="insights-heading">
         <div className="card__header">
-          <h2 id="insights-heading">{formatMonth(month)}</h2>
+          <h2 id="insights-heading">{periodLabel(period, start)}</h2>
           {hiddenCount > 0 && <p className="card__meta">{hiddenCount} hidden</p>}
         </div>
         {error && !current ? (

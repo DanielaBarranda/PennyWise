@@ -781,51 +781,26 @@
   }
 }
 
-/* ================= Budget period in the budget form ================= */
-.segmented--block {
-  align-self: flex-start;
+/* ================= Remove budget (in the budget form) ================= */
+.budget-remove__start {
+  margin-right: auto;
+  color: var(--danger);
 }
 
-.budget-period__total {
-  margin: -6px 0 0;
-  color: var(--muted);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
+.budget-remove__start:hover:not(:disabled) {
+  background: var(--danger-bg);
 }
 
-.budget-period__total strong {
-  color: var(--text);
+.budget-remove {
+  padding: 14px 16px;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--r-md);
+  background: var(--danger-bg);
 }
 
-.budget-period__unit {
-  color: var(--muted);
-  font-weight: 400;
-}
-
-@media (max-width: 520px) {
-  .segmented--block {
-    display: flex;
-    align-self: stretch;
-  }
-
-  .segmented--block .segmented__option {
-    flex: 1;
-    text-align: center;
-  }
-}
-
-.stat__unit {
-  color: var(--muted);
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.allowance__plan {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: var(--fs-sm);
+.budget-remove__text {
+  margin: 0 0 4px;
+  font-weight: 600;
 }
 
 /* ================= Profile photo ================= */

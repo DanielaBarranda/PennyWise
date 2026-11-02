@@ -7,69 +7,48 @@ using PennyWise.Api.Validation;
 
 namespace PennyWise.Api.Services;
 
-// Suggested spending allowances. The monthly budget is always the limit; the
-// daily and weekly figures only spread what is left of it over the days left,
-// so switching views never adds money or changes the budget.
+// What can still be spent in one budget period (a day, a week or a month). The
+// period's own budget is the limit; nothing is converted from another period.
 //
-//   available = budget - spent so far this month - unpaid bills due this month (overdue included)
-//   daily     = available / days left in the month (today included)
-//   weekly    = daily x days left in this week (Monday-Sunday), within this month
-//   monthly   = available
+//   available = budget - spent in the period - unpaid bills due in the period (overdue ones included)
+//   daily     = available / days left in the period (today included), rounded down to the centavo
+//   total     = available
 //
 // Unpaid bills are set aside because they have not been spent yet. Paid bills
 // that were recorded as expenses are already in "spent", so nothing is counted twice.
 public class AllowanceService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser, BillService bills)
 {
-    public async Task<AllowanceResponse> CalculateAsync(string month, AllowancePeriod? requested)
+    public async Task<AllowanceResponse> CalculateAsync(BudgetWindow window)
     {
         var userId = currentUser.Id;
-        var period = requested ?? await db.Users.Where(u => u.Id == userId).Select(u => u.AllowancePeriod).FirstAsync();
-        var (first, last) = MonthKey.Range(month);
+        var (first, last) = (window.Start, window.End);
         var today = clock.Today();
 
-        var budget = await db.Budgets.AsNoTracking().Where(b => b.UserId == userId && b.Month == month)
+        var budget = await db.Budgets.AsNoTracking()
+            .Where(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start)
             .Select(b => (decimal?)b.Amount).FirstOrDefaultAsync();
         var spent = (await db.Expenses.AsNoTracking()
             .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => e.Amount).ToListAsync()).Sum();
 
-        var timing = today > last ? "Past" : today < first ? "Future" : "Current";
-        // Every unpaid bill due this month, including overdue ones: they still have to be paid.
-        var reserved = timing == "Past"
+        var ended = today > last;
+        // Unpaid bills due in the period: from its first day (overdue ones still
+        // have to be paid) to its last. Nothing is set aside once it has ended.
+        var reserved = ended
             ? 0m
             : (await bills.OccurrencesAsync(first, last)).Where(o => o.Status != "Paid").Sum(o => o.Amount);
-
-        var daysLeft = timing switch
-        {
-            "Current" => last.DayNumber - today.DayNumber + 1,
-            "Future" => last.DayNumber - first.DayNumber + 1,
-            _ => 0,
-        };
-        // Days from today (or the 1st, for a future month) to Sunday, not past the month's end.
-        var weekStart = timing == "Current" ? today : first;
-        var daysToSunday = ((int)DayOfWeek.Sunday - (int)weekStart.DayOfWeek + 7) % 7 + 1;
-        var daysInWeek = timing == "Past" ? 0 : Math.Min(daysToSunday, daysLeft);
+        var daysLeft = ended ? 0 : last.DayNumber - (today < first ? first : today).DayNumber + 1;
 
         if (budget is null)
         {
-            return new AllowanceResponse(month, period.ToString(), "NoBudget", null, spent, reserved, null,
-                daysLeft, daysInWeek, null, null, null, null);
+            return new AllowanceResponse(window.Period.ToString(), first, last, "NoBudget", null, spent, reserved, null, daysLeft, null, null);
         }
 
         var available = budget.Value - spent - reserved;
         var spendable = Math.Max(available, 0);
-        // Rounded down to the centavo so the suggestions never add up to more than is available.
         var daily = daysLeft > 0 ? Math.Floor(spendable / daysLeft * 100) / 100 : 0;
-        var weekly = Math.Min(daily * daysInWeek, spendable);
-        var status = timing == "Past" ? "MonthEnded" : available < 0 ? "OverBudget" : "Available";
-        var amount = period switch
-        {
-            AllowancePeriod.Daily => daily,
-            AllowancePeriod.Weekly => weekly,
-            _ => spendable,
-        };
+        var status = ended ? "Ended" : available < 0 ? "OverBudget" : "Available";
 
-        return new AllowanceResponse(month, period.ToString(), status, budget, spent, reserved, available,
-            daysLeft, daysInWeek, amount, daily, weekly, spendable);
+        return new AllowanceResponse(window.Period.ToString(), first, last, status, budget, spent, reserved, available, daysLeft, daily, spendable);
     }
 }

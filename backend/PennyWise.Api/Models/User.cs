@@ -24,20 +24,13 @@ public class User
 
     public DateTime? LockoutEndsAt { get; set; }
 
-    // How the dashboard shows the suggested spending allowance. A display
-    // preference only: it never changes the monthly budget.
-    public AllowancePeriod AllowancePeriod { get; set; } = AllowancePeriod.Monthly;
+    // Whether the dashboard works with daily, weekly or monthly budgets. Stored
+    // in the column "AllowancePeriod" (its name before budgets had periods).
+    public BudgetPeriod BudgetPeriod { get; set; } = BudgetPeriod.Monthly;
 
     // When the profile photo last changed (null = no photo). The browser adds it
     // to the photo URL, so a new photo is never hidden by an old cached one.
     public DateTime? AvatarUpdatedAt { get; set; }
 
     public DateTime CreatedAt { get; set; }
-}
-
-public enum AllowancePeriod
-{
-    Daily,
-    Weekly,
-    Monthly,
 }

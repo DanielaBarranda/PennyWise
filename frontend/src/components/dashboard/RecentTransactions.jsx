@@ -1,9 +1,10 @@
 import CategoryBadge, { CategoryIcon } from '../common/CategoryBadge.jsx'
 import Icon from '../common/Icon.jsx'
 import { EmptyState } from '../common/States.jsx'
+import { THIS_PERIOD } from '../../utils/budgetPeriod.js'
 import { formatDate, formatPeso } from '../../utils/format.js'
 
-export default function RecentTransactions({ expenses, onAdd }) {
+export default function RecentTransactions({ expenses, period, onAdd }) {
   return (
     <section className="card card--flush" aria-labelledby="recent-heading">
       <div className="card__header card__header--padded">
@@ -19,7 +20,7 @@ export default function RecentTransactions({ expenses, onAdd }) {
         <div className="card__body">
           <EmptyState
             compact
-            title="No expenses this month"
+            title={`No expenses ${THIS_PERIOD[period] ?? 'this month'}`}
             message="Record what you spend and PennyWise keeps the totals for you."
             action={
               <button type="button" className="button button--primary" onClick={onAdd}>
@@ -32,7 +33,7 @@ export default function RecentTransactions({ expenses, onAdd }) {
       ) : (
         <div className="table-wrap">
           <table className="data-table">
-            <caption className="visually-hidden">Five most recent expenses this month</caption>
+            <caption className="visually-hidden">Five most recent expenses {THIS_PERIOD[period] ?? 'this month'}</caption>
             <thead>
               <tr>
                 <th scope="col">Date</th>

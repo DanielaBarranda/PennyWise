@@ -4,59 +4,52 @@ import FormField from '../common/FormField.jsx'
 import Icon from '../common/Icon.jsx'
 import { CategoryIcon } from '../common/CategoryBadge.jsx'
 import { api } from '../../services/api.js'
-import { useAuth } from '../../hooks/useAuth.js'
 import { useToast } from '../../hooks/useToast.js'
-import {
-  PERIODS,
-  PERIOD_BUDGET_LABELS,
-  PERIOD_HINTS,
-  PERIOD_WORDS,
-  amountText,
-  daysInMonth,
-  fromMonthly,
-  toMonthly,
-} from '../../utils/budgetPeriod.js'
-import { CATEGORIES, MAX_AMOUNT } from '../../utils/constants.js'
-import { formatMonth, formatPeso } from '../../utils/format.js'
+import { PERIOD_UNIT, periodLabel } from '../../utils/budgetPeriod.js'
+import { CATEGORIES } from '../../utils/constants.js'
+import { formatPeso } from '../../utils/format.js'
 import { validateAmount, validateBudget } from '../../utils/validation.js'
 
-// `budget` is null when the month has no budget yet (create), otherwise it is edited.
-export default function BudgetFormModal({ open, month, budget, onClose, onSaved }) {
+const HINTS = {
+  Daily: 'The most you plan to spend on this day.',
+  Weekly: 'The most you plan to spend this week (Monday to Sunday).',
+  Monthly: 'The most you plan to spend this month.',
+}
+
+// The budget for one period (the day, week or month shown on the dashboard).
+// What you type is exactly what is saved: nothing is converted to another period.
+// `budget` is null when the period has no budget yet (create), otherwise it is edited.
+export default function BudgetFormModal({ open, period, start, budget, onClose, onSaved, onRemoved }) {
   const [saving, setSaving] = useState(false)
 
   return (
     <Modal
       open={open}
       wide
-      title={`${budget ? 'Edit' : 'Set'} budget for ${formatMonth(month)}`}
+      title={`${budget ? 'Edit' : 'Set'} budget for ${periodLabel(period, start)}`}
       description="Your spending limit, plus optional limits for individual categories."
       onClose={saving ? () => {} : onClose}
     >
-      <BudgetForm month={month} budget={budget} onCancel={onClose} onSaved={onSaved} onSavingChange={setSaving} />
+      <BudgetForm period={period} start={start} budget={budget} onCancel={onClose} onSaved={onSaved} onRemoved={onRemoved} onSavingChange={setSaving} />
     </Modal>
   )
 }
 
-// Amounts are typed in the chosen period (day, week or month) and saved as
-// monthly amounts. The choice is the account's period preference, which the
-// dashboard's budget and allowance cards also follow.
-function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
+function BudgetForm({ period, start, budget, onCancel, onSaved, onRemoved, onSavingChange }) {
   const toast = useToast()
-  const { user, updatePreferences } = useAuth()
   const formRef = useRef(null)
-  const [period, setPeriod] = useState(user.allowancePeriod ?? 'Monthly')
-  const [form, setForm] = useState(() => {
-    const show = (monthly) => amountText(fromMonthly(monthly, period, month))
-    return {
-      amount: budget ? show(budget.amount) : '',
-      categoryLimits: Object.fromEntries(
-        CATEGORIES.map((c) => {
-          const limit = budget?.categoryLimits?.find((l) => l.category === c)
-          return [c, limit ? show(limit.amount) : '']
-        }),
-      ),
-    }
-  })
+  const unit = PERIOD_UNIT[period]
+  const label = periodLabel(period, start)
+  const [form, setForm] = useState(() => ({
+    amount: budget ? String(budget.amount) : '',
+    categoryLimits: Object.fromEntries(
+      CATEGORIES.map((c) => {
+        const limit = budget?.categoryLimits?.find((l) => l.category === c)
+        return [c, limit ? String(limit.amount) : '']
+      }),
+    ),
+  }))
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -64,21 +57,6 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
   function showErrors(fieldErrors) {
     setErrors(fieldErrors)
     requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus())
-  }
-
-  // Switching period keeps the same money: ₱150 a day becomes ₱1,050 a week.
-  function changePeriod(next) {
-    const convert = (raw) =>
-      raw.trim() !== '' && validateAmount(raw, { required: false }) === null
-        ? amountText(fromMonthly(toMonthly(raw, period, month), next, month))
-        : raw
-    setForm((f) => ({
-      amount: convert(f.amount),
-      categoryLimits: Object.fromEntries(CATEGORIES.map((c) => [c, convert(f.categoryLimits[c])])),
-    }))
-    setErrors({})
-    setFormError(null)
-    setPeriod(next)
   }
 
   function setBusy(value) {
@@ -89,35 +67,26 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
   async function handleSubmit(event) {
     event.preventDefault()
     setFormError(null)
-    const clientErrors = validateBudget(form, PERIOD_BUDGET_LABELS[period])
-    const monthlyAmount = clientErrors.amount ? 0 : toMonthly(form.amount, period, month)
-    if (monthlyAmount > MAX_AMOUNT) {
-      clientErrors.amount = `That comes to ${formatPeso(monthlyAmount)} for the month, more than the ₱${MAX_AMOUNT.toLocaleString('en-PH')} maximum.`
-    }
+    const clientErrors = validateBudget(form, `${period} budget`)
     if (Object.keys(clientErrors).length > 0) {
       if (clientErrors.categoryLimits) setFormError(clientErrors.categoryLimits)
       return showErrors(clientErrors)
     }
 
     const payload = {
-      month,
-      amount: monthlyAmount,
+      period,
+      start,
+      amount: Number(form.amount),
       categoryLimits: CATEGORIES.filter((c) => form.categoryLimits[c].trim() !== '').map((c) => ({
         category: c,
-        amount: toMonthly(form.categoryLimits[c], period, month, { roundDown: true }),
+        amount: Number(form.categoryLimits[c]),
       })),
     }
 
     setBusy(true)
     try {
       const saved = budget ? await api.updateBudget(budget.id, payload) : await api.createBudget(payload)
-      toast.success(`Budget for ${formatMonth(month)} saved.`)
-      if (period !== user.allowancePeriod) {
-        // The budget is already saved; only the display preference failed.
-        updatePreferences({ allowancePeriod: period }).catch(() =>
-          toast.error('Your budget was saved, but the daily/weekly/monthly choice could not be saved.'),
-        )
-      }
+      toast.success(`Budget for ${label} saved.`)
       setBusy(false)
       onSaved(saved)
     } catch (error) {
@@ -125,6 +94,22 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
       // Errors about the limits as a whole have no single input to sit under.
       setFormError(error.fieldErrors?.categoryLimits ?? error.message)
       if (Object.keys(error.fieldErrors ?? {}).length > 0) showErrors(error.fieldErrors)
+    }
+  }
+
+  // The period goes back to having no budget. Expenses are not touched.
+  async function handleRemove() {
+    setFormError(null)
+    setBusy(true)
+    try {
+      await api.deleteBudget(budget.id)
+      toast.success(`Budget for ${label} removed.`)
+      setBusy(false)
+      onRemoved()
+    } catch (error) {
+      setBusy(false)
+      setConfirmingRemove(false)
+      setFormError(error.message)
     }
   }
 
@@ -137,17 +122,7 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
         </p>
       )}
 
-      <fieldset className="segmented segmented--block">
-        <legend className="visually-hidden">Budget period</legend>
-        {PERIODS.map((p) => (
-          <label key={p} className="segmented__option">
-            <input type="radio" name="budget-period" value={p} checked={period === p} onChange={() => changePeriod(p)} />
-            <span>{p}</span>
-          </label>
-        ))}
-      </fieldset>
-
-      <FormField label={PERIOD_BUDGET_LABELS[period]} error={errors.amount} hint={PERIOD_HINTS[period]}>
+      <FormField label={`${period} budget`} error={errors.amount} hint={HINTS[period]}>
         {(props) => (
           <div className="input-affix input-affix--large">
             <span className="input-affix__prefix" aria-hidden="true">
@@ -166,11 +141,10 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
           </div>
         )}
       </FormField>
-      <MonthlyTotal amount={form.amount} period={period} month={month} />
 
       <fieldset className="form__fieldset">
-        <legend>Category limits {period !== 'Monthly' && <span className="budget-period__unit">({PERIOD_WORDS[period]})</span>}</legend>
-        <p className="field__hint">Optional. PennyWise warns you when a category gets close to its limit. Leave blank for no limit.</p>
+        <legend>Category limits</legend>
+        <p className="field__hint">Optional, for this {unit}. PennyWise warns you when a category gets close to its limit. Leave blank for no limit.</p>
         <div className="limit-list">
           {CATEGORIES.map((category) => (
             <FormField key={category} className="limit-row" label={category} error={errors[`limit-${category}`]}>
@@ -201,27 +175,37 @@ function BudgetForm({ month, budget, onCancel, onSaved, onSavingChange }) {
         <Allocation form={form} />
       </fieldset>
 
-      <div className="modal__actions">
-        <button type="button" className="button button--ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-        <button type="submit" className="button button--primary" disabled={saving}>
-          {saving ? 'Saving…' : 'Save budget'}
-        </button>
-      </div>
+      {confirmingRemove ? (
+        <div className="budget-remove" role="group" aria-label="Remove budget">
+          <p className="budget-remove__text">
+            Remove the budget for {label}? Its category limits go too. Your expenses stay as they are.
+          </p>
+          <div className="modal__actions">
+            <button type="button" className="button button--ghost" onClick={() => setConfirmingRemove(false)} disabled={saving}>
+              Keep budget
+            </button>
+            <button type="button" className="button button--danger" onClick={handleRemove} disabled={saving}>
+              {saving ? 'Removing…' : 'Remove budget'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="modal__actions">
+          {budget && (
+            <button type="button" className="button button--ghost budget-remove__start" onClick={() => setConfirmingRemove(true)} disabled={saving}>
+              <Icon name="trash" />
+              Remove budget
+            </button>
+          )}
+          <button type="button" className="button button--ghost" onClick={onCancel} disabled={saving}>
+            Cancel
+          </button>
+          <button type="submit" className="button button--primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save budget'}
+          </button>
+        </div>
+      )}
     </form>
-  )
-}
-
-// "₱150.00 × 31 days = ₱4,650.00 for October 2026", so the saved monthly amount is never a surprise.
-function MonthlyTotal({ amount, period, month }) {
-  if (period === 'Monthly' || validateAmount(amount) !== null) return null
-  const days = daysInMonth(month)
-  const times = period === 'Daily' ? `${days} days` : `${days} days ÷ 7`
-  return (
-    <p className="budget-period__total" aria-live="polite">
-      {formatPeso(Number(amount))} × {times} = <strong>{formatPeso(toMonthly(amount, period, month))}</strong> for {formatMonth(month)}
-    </p>
   )
 }
 

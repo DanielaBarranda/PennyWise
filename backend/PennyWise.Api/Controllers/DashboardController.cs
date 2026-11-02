@@ -9,15 +9,12 @@ namespace PennyWise.Api.Controllers;
 [Route("api/dashboard")]
 public class DashboardController(DashboardService dashboard, AppClock clock) : ControllerBase
 {
-    // GET /api/dashboard/summary?month=2026-10 (defaults to the current month)
+    // GET /api/dashboard/summary?month=2026-10, or ?period=Weekly&date=2026-11-04
+    // (see PeriodQuery; defaults to the current month)
     [HttpGet("summary")]
-    public async Task<ActionResult<DashboardSummaryResponse>> Summary(string? month)
+    public async Task<ActionResult<DashboardSummaryResponse>> Summary(string? month, string? period, string? date)
     {
-        if (month is not null && !MonthKey.IsValid(month))
-        {
-            ModelState.AddModelError(nameof(month), "Month must be in YYYY-MM format, e.g. 2026-10.");
-            return ValidationProblem(ModelState);
-        }
-        return await dashboard.GetSummaryAsync(month ?? clock.CurrentMonth());
+        if (PeriodQuery.Resolve(ModelState, month, period, date, clock.Today()) is not { } window) return ValidationProblem(ModelState);
+        return await dashboard.GetSummaryAsync(window);
     }
 }

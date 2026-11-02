@@ -2,24 +2,23 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PennyWise.Api.DTOs;
 
+// What can still be spent in one budget period (a day, a week or a month).
 public record AllowanceResponse(
-    string Month,
-    string Period,      // Daily | Weekly | Monthly (the one `Amount` is for)
-    string Status,      // Available | OverBudget | MonthEnded | NoBudget
+    string Period,            // Daily | Weekly | Monthly
+    DateOnly Start,
+    DateOnly End,
+    string Status,            // Available | OverBudget | Ended | NoBudget
     decimal? Budget,
     decimal Spent,
-    decimal ReservedForBills, // unpaid bills still due this month
+    decimal ReservedForBills, // unpaid bills due within the period
     decimal? Available,       // budget - spent - reserved; negative when over budget
-    int DaysLeft,             // in the month, today included
-    int DaysLeftInWeek,       // today to Sunday, within the month
-    decimal? Amount,          // suggested allowance for the chosen period
-    decimal? Daily,
-    decimal? Weekly,
-    decimal? Monthly);
+    int DaysLeft,             // in the period, today included
+    decimal? Daily,           // what is left, divided by the days left
+    decimal? Total);          // everything left in the period
 
 public class PreferencesRequest
 {
-    [Required(ErrorMessage = "Choose an allowance view.")]
-    [AllowedValues("Daily", "Weekly", "Monthly", ErrorMessage = "Allowance view must be Daily, Weekly or Monthly.")]
-    public string? AllowancePeriod { get; set; }
+    [Required(ErrorMessage = "Choose a budget period.")]
+    [AllowedValues("Daily", "Weekly", "Monthly", ErrorMessage = "Budget period must be Daily, Weekly or Monthly.")]
+    public string? BudgetPeriod { get; set; }
 }

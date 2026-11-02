@@ -24,7 +24,7 @@ public sealed class LegacyDataClaimer(PennyWiseDbContext db, IConfiguration conf
         // A month this user already budgeted keeps their own budget; the older
         // one stays unowned (and preserved) instead of breaking the one-per-month rule.
         var budgets = await db.Budgets
-            .Where(b => b.UserId == null && !db.Budgets.Any(o => o.UserId == userId && o.Month == b.Month))
+            .Where(b => b.UserId == null && !db.Budgets.Any(o => o.UserId == userId && o.Period == b.Period && o.StartDate == b.StartDate))
             .ExecuteUpdateAsync(set => set.SetProperty(b => b.UserId, userId));
 
         if (expenses + budgets > 0)

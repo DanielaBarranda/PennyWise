@@ -10,13 +10,15 @@ namespace PennyWise.Api.Services;
 // Every query is limited to the signed-in user's budgets (see ExpenseService).
 public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser)
 {
-    public async Task<List<BudgetResponse>> ListAsync(string? month)
+    // Either every budget starting in a month (any period), or the one budget for a window.
+    public async Task<List<BudgetResponse>> ListAsync(string? month, BudgetWindow? window = null)
     {
         var userId = currentUser.Id;
         var query = db.Budgets.AsNoTracking().Include(b => b.CategoryLimits).Where(b => b.UserId == userId);
         if (month is not null) query = query.Where(b => b.Month == month);
+        if (window is { } w) query = query.Where(b => b.Period == w.Period && b.StartDate == w.Start);
 
-        var budgets = await query.OrderByDescending(b => b.Month).ToListAsync();
+        var budgets = await query.OrderByDescending(b => b.StartDate).ThenBy(b => b.Period).ToListAsync();
         return budgets.Select(BudgetResponse.From).ToList();
     }
 
@@ -25,24 +27,35 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser cu
 
     public async Task<BudgetResponse> CreateAsync(BudgetRequest request)
     {
-        await EnsureMonthIsFreeAsync(request.Month!, exceptBudgetId: null);
+        var window = request.ToWindow();
+        await EnsurePeriodIsFreeAsync(window, exceptBudgetId: null);
 
-        var budget = new Budget { UserId = currentUser.Id, Month = request.Month!, CreatedAt = clock.UtcNow };
+        var budget = new Budget { UserId = currentUser.Id, CreatedAt = clock.UtcNow };
+        SetWindow(budget, window);
         Apply(budget, request);
         db.Budgets.Add(budget);
-        await SaveAsync(budget.Month);
+        await SaveAsync(window);
         return BudgetResponse.From(budget);
     }
 
     public async Task<BudgetResponse> UpdateAsync(int id, BudgetRequest request)
     {
         var budget = await FindAsync(id);
-        await EnsureMonthIsFreeAsync(request.Month!, exceptBudgetId: id);
+        var window = request.ToWindow();
+        await EnsurePeriodIsFreeAsync(window, exceptBudgetId: id);
 
-        budget.Month = request.Month!;
+        SetWindow(budget, window);
         Apply(budget, request);
-        await SaveAsync(budget.Month);
+        await SaveAsync(window);
         return BudgetResponse.From(budget);
+    }
+
+    // Removes the budget (and its category limits). Expenses are not touched;
+    // the period simply has no budget again.
+    public async Task DeleteAsync(int id)
+    {
+        db.Budgets.Remove(await FindAsync(id));
+        await db.SaveChangesAsync();
     }
 
     private async Task<Budget> FindAsync(int id)
@@ -52,14 +65,24 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser cu
             ?? throw new NotFoundException($"Budget {id} was not found.");
     }
 
-    private async Task EnsureMonthIsFreeAsync(string month, int? exceptBudgetId)
+    private static void SetWindow(Budget budget, BudgetWindow window)
+    {
+        budget.Period = window.Period;
+        budget.StartDate = window.Start;
+        budget.Month = window.Month;
+    }
+
+    private async Task EnsurePeriodIsFreeAsync(BudgetWindow window, int? exceptBudgetId)
     {
         var userId = currentUser.Id;
-        if (await db.Budgets.AnyAsync(b => b.UserId == userId && b.Month == month && b.Id != exceptBudgetId))
+        if (await db.Budgets.AnyAsync(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start && b.Id != exceptBudgetId))
         {
-            throw new ConflictException($"A budget for {month} already exists. Edit that budget instead.");
+            throw new ConflictException(AlreadyExists(window));
         }
     }
+
+    private static string AlreadyExists(BudgetWindow window) =>
+        $"A budget for {window.Describe()} already exists. Edit that budget instead.";
 
     // Updates limits in place: changes existing ones, removes the ones no longer
     // sent, and adds new ones. Replacing them all at once would briefly break the
@@ -81,8 +104,8 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser cu
         }
     }
 
-    // The unique index on Month is the final safety net if two requests race.
-    private async Task SaveAsync(string month)
+    // The unique index on (period, start date) is the final safety net if two requests race.
+    private async Task SaveAsync(BudgetWindow window)
     {
         try
         {
@@ -90,7 +113,7 @@ public class BudgetService(PennyWiseDbContext db, AppClock clock, CurrentUser cu
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE") == true)
         {
-            throw new ConflictException($"A budget for {month} already exists. Edit that budget instead.");
+            throw new ConflictException(AlreadyExists(window));
         }
     }
 }

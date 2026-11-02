@@ -7,6 +7,7 @@ import { STATUS_LABELS, STATUS_TONES } from '../components/bills/billText.js'
 import InsightList from '../components/insights/InsightList.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { api } from '../services/api.js'
+import { periodLabel } from '../utils/budgetPeriod.js'
 import { formatDate, formatMonth, formatPeso } from '../utils/format.js'
 
 const signedPeso = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatPeso(Math.abs(value))}`
@@ -17,7 +18,7 @@ const signedPercent = (value) => (value == null ? '—' : `${value > 0 ? '+' : v
 export default function ReportsPage({ month, onMonthChange }) {
   const { data, error, reload } = useAsync(() => api.getMonthlyReport(month), [month])
   const report = data?.month === month ? data : null
-  const isEmpty = report && report.expenseCount === 0 && report.budget == null && report.savings.goals.length === 0 && report.bills.due === 0
+  const isEmpty = report && report.expenseCount === 0 && report.budget == null && report.savings.goals.length === 0 && report.bills.due === 0 && report.periodBudgets.length === 0
 
   return (
     <>
@@ -88,6 +89,40 @@ export default function ReportsPage({ month, onMonthChange }) {
               </div>
             )}
           </section>
+
+          {report.periodBudgets.length > 0 && (
+            <section className="card card--flush" aria-labelledby="report-period-budgets">
+              <div className="card__header card__header--padded"><h2 id="report-period-budgets">Weekly and daily budgets</h2></div>
+              <div className="table-wrap">
+                <table className="data-table data-table--keep-head">
+                  <thead>
+                    <tr>
+                      <th scope="col">Period</th>
+                      <th scope="col" className="num">Budget</th>
+                      <th scope="col" className="num">Spent</th>
+                      <th scope="col" className="num">Left</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.periodBudgets.map((b) => (
+                      <tr key={`${b.period}-${b.start}`}>
+                        <td>
+                          <span className="data-table__strong">{periodLabel(b.period, b.start)}</span>
+                          <span className="data-table__muted"> · {b.period === 'Weekly' ? 'Week' : 'Day'}</span>
+                        </td>
+                        <td className="num">{formatPeso(b.amount)}</td>
+                        <td className="num">{formatPeso(b.spent)}</td>
+                        <td className={`num ${b.amount - b.spent < 0 ? 'amount--out' : ''}`}>
+                          {b.amount - b.spent < 0 ? `${formatPeso(b.spent - b.amount)} over` : formatPeso(b.amount - b.spent)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="card__footnote">Each one counts the spending inside its own dates. They are not added up into a monthly budget.</p>
+            </section>
+          )}
 
           <div className="report__columns">
             <section className="card" aria-labelledby="report-savings">

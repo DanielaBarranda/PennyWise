@@ -4,48 +4,57 @@ using PennyWise.Api.DTOs;
 
 namespace PennyWise.Api.Tests;
 
-// Today is Tue 20 Oct 2026: 12 days left in October (today included) and
-// 6 days left in the week (to Sunday 25 Oct).
+// Today is Tue 20 Oct 2026: 12 days left in October (today included), and the
+// week of Mon 19 Oct runs to Sun 25 Oct, so 6 days are left in it.
 public class AllowanceApiTests : FeatureTestBase
 {
     private async Task<AllowanceResponse> GetAllowanceAsync(string query = "month=2026-10") =>
         (await Client.GetFromJsonAsync<AllowanceResponse>($"/api/allowance?{query}"))!;
 
     [Fact]
-    public async Task Allowance_spreads_what_is_left_after_spending_and_unpaid_bills()
+    public async Task Monthly_allowance_spreads_what_is_left_after_spending_and_unpaid_bills()
     {
         await CreateBudgetAsync("2026-10", 6000);
         await CreateExpenseAsync(1000, "Food", "2026-10-05");
         await CreateBillAsync("Water", 600, "OneTime", "2026-10-25");
 
-        var a = await GetAllowanceAsync("month=2026-10&period=Daily");
+        var a = await GetAllowanceAsync();
 
         Assert.Equal((6000m, 1000m, 600m, 4400m), (a.Budget!.Value, a.Spent, a.ReservedForBills, a.Available!.Value));
-        Assert.Equal((12, 6), (a.DaysLeft, a.DaysLeftInWeek));
-        Assert.Equal(366.66m, a.Daily);   // 4400 / 12, rounded down
-        Assert.Equal(2199.96m, a.Weekly); // daily x 6
-        Assert.Equal(4400m, a.Monthly);
-        Assert.Equal((366.66m, "Daily", "Available"), (a.Amount!.Value, a.Period, a.Status));
+        Assert.Equal(("Monthly", new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31)), (a.Period, a.Start, a.End));
+        Assert.Equal(12, a.DaysLeft);
+        Assert.Equal(366.66m, a.Daily); // 4400 / 12, rounded down
+        Assert.Equal(4400m, a.Total);
+        Assert.Equal("Available", a.Status);
     }
 
     [Fact]
-    public async Task Switching_the_view_never_changes_the_budget_or_the_total_available()
+    public async Task Weekly_allowance_uses_only_the_weeks_own_budget_and_spending()
     {
-        await CreateBudgetAsync("2026-10", 6000);
-        await CreateExpenseAsync(1000, "Food", "2026-10-05");
+        await CreateBudgetAsync("2026-10", 6000); // a monthly budget is ignored in the weekly view
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-19", amount = 1000 });
+        await CreateExpenseAsync(400, "Food", "2026-10-18");  // Sunday before: last week
+        await CreateExpenseAsync(100, "Food", "2026-10-19");  // this week
+        await CreateBillAsync("Load", 300, "OneTime", "2026-10-24"); // due this week
+        await CreateBillAsync("Rent", 2000, "OneTime", "2026-10-28"); // next week
 
-        var results = new List<AllowanceResponse>();
-        foreach (var period in new[] { "Daily", "Weekly", "Monthly" })
-        {
-            (await Client.PutAsJsonAsync("/api/auth/preferences", new { allowancePeriod = period })).EnsureSuccessStatusCode();
-            results.Add(await GetAllowanceAsync()); // uses the saved preference
-        }
-        var budget = (await Client.GetFromJsonAsync<List<BudgetResponse>>("/api/budgets?month=2026-10"))!.Single();
+        var a = await GetAllowanceAsync("period=Weekly&date=2026-10-20");
 
-        Assert.Equal(["Daily", "Weekly", "Monthly"], results.Select(r => r.Period));
-        Assert.All(results, r => Assert.Equal((6000m, 5000m), (r.Budget!.Value, r.Available!.Value)));
-        Assert.Equal(6000m, budget.Amount);
-        Assert.Equal("Monthly", (await Client.GetFromJsonAsync<UserResponse>("/api/auth/me"))!.AllowancePeriod);
+        Assert.Equal(("Weekly", new DateOnly(2026, 10, 19), new DateOnly(2026, 10, 25)), (a.Period, a.Start, a.End));
+        Assert.Equal((1000m, 100m, 300m, 600m), (a.Budget!.Value, a.Spent, a.ReservedForBills, a.Available!.Value));
+        Assert.Equal((6, 100m, 600m), (a.DaysLeft, a.Daily!.Value, a.Total!.Value));
+    }
+
+    [Fact]
+    public async Task Daily_allowance_is_whatever_is_left_today()
+    {
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Daily", start = "2026-10-20", amount = 300 });
+        await CreateExpenseAsync(120, "Food", "2026-10-20");
+        await CreateExpenseAsync(999, "Food", "2026-10-19"); // yesterday does not count
+
+        var a = await GetAllowanceAsync("period=Daily&date=2026-10-20");
+
+        Assert.Equal((300m, 120m, 1, 180m, 180m), (a.Budget!.Value, a.Spent, a.DaysLeft, a.Daily!.Value, a.Total!.Value));
     }
 
     [Fact]
@@ -71,33 +80,36 @@ public class AllowanceApiTests : FeatureTestBase
 
         var a = await GetAllowanceAsync();
 
-        Assert.Equal(("OverBudget", -200m, 0m, 0m, 0m), (a.Status, a.Available!.Value, a.Daily!.Value, a.Weekly!.Value, a.Monthly!.Value));
+        Assert.Equal(("OverBudget", -200m, 0m, 0m), (a.Status, a.Available!.Value, a.Daily!.Value, a.Total!.Value));
     }
 
     [Fact]
-    public async Task No_budget_and_other_months_are_handled()
+    public async Task No_budget_and_other_periods_are_handled()
     {
         var none = await GetAllowanceAsync();
         await CreateBudgetAsync("2026-09", 5000);
         await CreateBudgetAsync("2026-11", 3000);
-        var past = await GetAllowanceAsync("month=2026-09");
-        var future = await GetAllowanceAsync("month=2026-11&period=Weekly");
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-12", amount = 700 });
+        var pastMonth = await GetAllowanceAsync("month=2026-09");
+        var futureMonth = await GetAllowanceAsync("month=2026-11");
+        var lastWeek = await GetAllowanceAsync("period=Weekly&date=2026-10-14");
 
-        Assert.Equal(("NoBudget", (decimal?)null), (none.Status, none.Amount));
-        Assert.Equal(("MonthEnded", 0, 0m), (past.Status, past.DaysLeft, past.Daily!.Value));
-        // November 2026 has 30 days and starts on a Sunday: one day in its first week.
-        Assert.Equal((30, 1, 100m, 100m), (future.DaysLeft, future.DaysLeftInWeek, future.Daily!.Value, future.Amount!.Value));
+        Assert.Equal(("NoBudget", (decimal?)null), (none.Status, none.Daily));
+        Assert.Equal(("Ended", 0, 0m), (pastMonth.Status, pastMonth.DaysLeft, pastMonth.Daily!.Value));
+        Assert.Equal((30, 100m, 3000m), (futureMonth.DaysLeft, futureMonth.Daily!.Value, futureMonth.Total!.Value));
+        Assert.Equal(("Ended", 0), (lastWeek.Status, lastWeek.DaysLeft));
     }
 
     [Fact]
-    public async Task Invalid_period_is_rejected()
+    public async Task Invalid_queries_are_rejected()
     {
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/allowance?period=Yearly")).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync("/api/auth/preferences", new { allowancePeriod = "Hourly" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/allowance?period=Weekly&date=2026-13-40")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync("/api/auth/preferences", new { budgetPeriod = "Hourly" })).StatusCode);
     }
 }
 
-// The last day of the month: one day left, and the week is cut at the month's end.
+// The last day of the month: one day left, so everything left is today's allowance.
 public class AllowanceMonthEndTests() : FeatureTestBase(new DateTimeOffset(2026, 10, 31, 2, 0, 0, TimeSpan.Zero))
 {
     [Fact]
@@ -106,10 +118,9 @@ public class AllowanceMonthEndTests() : FeatureTestBase(new DateTimeOffset(2026,
         await CreateBudgetAsync("2026-10", 3100);
         await CreateExpenseAsync(3000, "Food", "2026-10-10");
 
-        var a = (await Client.GetFromJsonAsync<AllowanceResponse>("/api/allowance?month=2026-10&period=Weekly"))!;
+        var a = (await Client.GetFromJsonAsync<AllowanceResponse>("/api/allowance?month=2026-10"))!;
 
-        // Sat 31 Oct: Sunday is 1 Nov, outside October, so the week has 1 day.
-        Assert.Equal((1, 1, 100m, 100m, 100m), (a.DaysLeft, a.DaysLeftInWeek, a.Daily!.Value, a.Weekly!.Value, a.Monthly!.Value));
+        Assert.Equal((1, 100m, 100m), (a.DaysLeft, a.Daily!.Value, a.Total!.Value));
     }
 }
 

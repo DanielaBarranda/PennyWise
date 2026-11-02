@@ -4,10 +4,12 @@ import FormField from '../common/FormField.jsx'
 import Icon from '../common/Icon.jsx'
 import CategoryPicker from './CategoryPicker.jsx'
 import { api } from '../../services/api.js'
+import { useAuth } from '../../hooks/useAuth.js'
 import { useToast } from '../../hooks/useToast.js'
+import { budgetName, periodQuery, periodStart } from '../../utils/budgetPeriod.js'
 import { MAX_DESCRIPTION_LENGTH } from '../../utils/constants.js'
 import { defaultDateForMonth } from '../../utils/dates.js'
-import { formatMonth, formatPeso } from '../../utils/format.js'
+import { formatPeso } from '../../utils/format.js'
 import { validateExpense } from '../../utils/validation.js'
 
 // `expense` is null when adding, or the expense being edited.
@@ -27,6 +29,7 @@ export default function ExpenseFormModal({ open, expense, month, onClose, onSave
 }
 
 function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
+  const { user } = useAuth()
   const toast = useToast()
   const formRef = useRef(null)
   const [form, setForm] = useState(() => ({
@@ -71,7 +74,7 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
       toast.success(expense ? 'Expense updated.' : 'Expense added.')
       setBusy(false)
       onSaved(saved)
-      warnIfOverBudget(toast, payload.expenseDate.slice(0, 7), payload.category)
+      warnIfOverBudget(toast, user.budgetPeriod ?? 'Monthly', payload.expenseDate, payload.category)
     } catch (error) {
       setBusy(false)
       setFormError(error.message)
@@ -149,24 +152,27 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
   )
 }
 
-// After a save, ask the API for that month's totals and warn if a limit is near or passed.
-async function warnIfOverBudget(toast, month, category) {
+// After a save, check the budget for the expense's own day, week or month (the
+// account's budget period) and warn if it, or the category's limit, is near or passed.
+async function warnIfOverBudget(toast, period, date, category) {
+  const start = periodStart(period, date)
   let summary
   try {
-    summary = await api.getDashboardSummary(month)
+    summary = await api.getDashboardSummary(periodQuery(period, start))
   } catch {
     return // The expense is already saved; a failed check should not show an error.
   }
+  if (!summary.budget) return
 
-  const label = formatMonth(month)
+  const label = budgetName(period, start)
   const categoryInfo = summary.categories?.find((c) => c.category === category)
 
   if (summary.status === 'Exceeded') {
-    toast.warning(`You are over your ${label} budget by ${formatPeso(-summary.remaining)}.`)
+    toast.warning(`You are over your ${label} by ${formatPeso(-summary.remaining)}.`)
   } else if (summary.status === 'Warning') {
-    toast.warning(`You have used ${Math.round(summary.percentSpent)}% of your ${label} budget.`)
+    toast.warning(`You have used ${Math.round(summary.percentSpent)}% of your ${label}.`)
   }
   if (categoryInfo?.status === 'Exceeded') {
-    toast.warning(`${category} spending is over its ${formatPeso(categoryInfo.limit)} limit for ${label}.`)
+    toast.warning(`${category} spending is over its ${formatPeso(categoryInfo.limit)} limit in your ${label}.`)
   }
 }

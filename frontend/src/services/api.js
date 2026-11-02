@@ -102,12 +102,14 @@ export const api = {
   // The version changes with every new photo, so the browser can cache each one forever.
   avatarUrl: (version) => `${BASE_URL}/auth/avatar?v=${encodeURIComponent(version)}`,
 
-  getDashboardSummary: (month) => request('/dashboard/summary', { query: { month } }),
+  // `query` is { month } or { period, date } (see periodQuery in utils/budgetPeriod.js).
+  getDashboardSummary: (query) => request('/dashboard/summary', { query }),
 
   getBudgets: (month) => request('/budgets', { query: { month } }),
   getBudget: (id) => request(`/budgets/${id}`),
   createBudget: (budget) => request('/budgets', { method: 'POST', body: budget }),
   updateBudget: (id, budget) => request(`/budgets/${id}`, { method: 'PUT', body: budget }),
+  deleteBudget: (id) => request(`/budgets/${id}`, { method: 'DELETE' }),
 
   getExpenses: ({ month, category } = {}) => request('/expenses', { query: { month, category } }),
   getExpense: (id) => request(`/expenses/${id}`),
@@ -134,8 +136,8 @@ export const api = {
   payBill: (id, payment) => request(`/bills/${id}/payments`, { method: 'POST', body: payment }),
   unpayBill: (id, dueDate) => request(`/bills/${id}/payments/${dueDate}`, { method: 'DELETE' }),
 
-  getInsights: (month) => request('/insights', { query: { month } }),
-  getAllowance: (month, period) => request('/allowance', { query: { month, period } }),
+  getInsights: (query) => request('/insights', { query }),
+  getAllowance: (query) => request('/allowance', { query }),
   getMonthlyReport: (month) => request('/reports/monthly', { query: { month } }),
   // A plain link: the browser downloads the file with the session cookie.
   monthlyReportCsvUrl: (month) => `${BASE_URL}/reports/monthly.csv?month=${encodeURIComponent(month)}`,

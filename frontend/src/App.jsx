@@ -19,7 +19,8 @@ import { useAuth } from './hooks/useAuth.js'
 import { useHashRoute } from './hooks/useHashRoute.js'
 import { useSidebarCollapsed } from './hooks/useSidebarCollapsed.js'
 import { useTheme } from './hooks/useTheme.js'
-import { currentMonth } from './utils/dates.js'
+import { periodStart } from './utils/budgetPeriod.js'
+import { currentMonth, todayIso } from './utils/dates.js'
 
 const AUTH_ROUTES = ['login', 'register']
 
@@ -82,8 +83,15 @@ function Routes({ theme, onToggleTheme }) {
 }
 
 function Workspace({ route, theme, onToggleTheme }) {
+  const { user } = useAuth()
   // The selected month is shared, so switching pages keeps the same month.
   const [month, setMonth] = useState(currentMonth)
+  // The dashboard and insights follow the account's budget period: a month (the
+  // shared month above), or the day/week containing `anchor`.
+  const [anchor, setAnchor] = useState(todayIso)
+  const period = user.budgetPeriod ?? 'Monthly'
+  const start = period === 'Monthly' ? `${month}-01` : periodStart(period, anchor)
+  const onStartChange = (next) => (period === 'Monthly' ? setMonth(next.slice(0, 7)) : setAnchor(next))
   const [collapsed, toggleSidebar] = useSidebarCollapsed()
   const Page =
     {
@@ -102,7 +110,7 @@ function Workspace({ route, theme, onToggleTheme }) {
         <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={onToggleTheme} />
         <main id="main" className="main" tabIndex={-1}>
           <PwaNotice />
-          <Page month={month} onMonthChange={setMonth} />
+          <Page month={month} onMonthChange={setMonth} period={period} start={start} onStartChange={onStartChange} />
         </main>
       </div>
     </div>

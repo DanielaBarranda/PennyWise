@@ -11,12 +11,12 @@ namespace PennyWise.Api.Services;
 // Rule-based insights, calculated from the user's own records each time they
 // are requested (no AI service, nothing hard-coded). Rules:
 //   1. Bills overdue or due within 7 days (current month view only)
-//   2. The month's overall budget: over it, or 80%+ used
+//   2. The period's budget (day, week or month): over it, or 80%+ used
 //   3. Each category limit: over it, or 75%+ used (one insight per category)
-//   4. Category spending compared with the same days of last month
+//   4. Category spending compared with the same days of last month (monthly view only)
 //   5. Savings goals reached, or behind a target date
 //   6. A suggestion to set a budget when there is spending but no budget
-// "Days left" only appears for the current month. Comparisons use the same
+// "Days left" only appears for the current period. Comparisons use the same
 // span of days in both months (1st to today), so a half-finished month is never
 // compared with a whole one.
 public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser, BillService bills)
@@ -28,18 +28,25 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
     private const decimal ComparisonMinPercent = 15m;
     private const decimal ComparisonMinAmount = 100m;
 
-    public async Task<List<InsightResponse>> GetAsync(string month)
+    public async Task<List<InsightResponse>> GetAsync(BudgetWindow window)
     {
         var userId = currentUser.Id;
-        var (first, last) = MonthKey.Range(month);
+        var (first, last) = (window.Start, window.End);
         var today = clock.Today();
-        var isCurrent = today >= first && today <= last;
+        var isCurrent = window.Contains(today);
         var daysLeft = isCurrent ? last.DayNumber - today.DayNumber + 1 : 0;
-        var monthName = first.ToString("MMMM yyyy", Ph);
+        // Part of every insight key, so a hidden insight is only hidden for its own period.
+        var month = window.Period == BudgetPeriod.Monthly ? window.Month : $"{window.Unit}-{window.Start:yyyy-MM-dd}";
+        var budgetName = window.Period switch
+        {
+            BudgetPeriod.Daily => $"budget for {first.ToString("MMM d", Ph)}",
+            BudgetPeriod.Weekly => $"budget for the week of {first.ToString("MMM d", Ph)}",
+            _ => $"{first.ToString("MMMM yyyy", Ph)} budget",
+        };
         var insights = new List<InsightResponse>();
 
         var budget = await db.Budgets.AsNoTracking().Include(b => b.CategoryLimits)
-            .FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
+            .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start);
         var expenses = await db.Expenses.AsNoTracking()
             .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => new { e.Amount, e.Category, e.ExpenseDate }).ToListAsync();
@@ -69,19 +76,19 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
             if (spent > budget.Amount)
             {
                 insights.Add(new($"budget-over-{month}", "Critical", "Fact", "Over budget",
-                    $"You've spent {Peso(spent - budget.Amount)} more than your {monthName} budget of {Peso(budget.Amount)}.", "dashboard", false));
+                    $"You've spent {Peso(spent - budget.Amount)} more than your {budgetName} of {Peso(budget.Amount)}.", "dashboard", false));
             }
             else if (percent >= 80)
             {
                 insights.Add(new($"budget-warn-{month}", "Warning", "Fact", "Budget almost used",
-                    $"You've used {Pct(percent)} of your {monthName} budget{DaysLeftText(daysLeft)}. {Peso(budget.Amount - spent)} is left.",
+                    $"You've used {Pct(percent)} of your {budgetName}{DaysLeftText(window, daysLeft)}. {Peso(budget.Amount - spent)} is left.",
                     "dashboard", true));
             }
         }
         else if (isCurrent && expenses.Count > 0)
         {
             insights.Add(new($"no-budget-{month}", "Info", "Suggestion", "No budget yet",
-                $"You've recorded {Peso(spent)} of spending this month. Setting a budget would show how much is left.", "dashboard", true));
+                $"You've recorded {Peso(spent)} of spending this {window.Unit}. Setting a budget would show how much is left.", "dashboard", true));
         }
 
         // 3. Category limits (at most one insight per category)
@@ -101,12 +108,27 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
             {
                 flagged.Add(limit.Category);
                 insights.Add(new($"cat-watch-{month}-{name}", "Warning", "Fact", $"{name} is close to its limit",
-                    $"You've used {Pct(percent)} of your {name} limit{DaysLeftText(daysLeft)}. {Peso(limit.Amount - total)} remains.",
+                    $"You've used {Pct(percent)} of your {name} limit{DaysLeftText(window, daysLeft)}. {Peso(limit.Amount - total)} remains.",
                     "expenses", true));
             }
         }
 
-        // 4. Same days of last month, per category
+        // 4. Same days of last month, per category (months only: a week or a day
+        // is too short for a fair comparison)
+        if (window.Period == BudgetPeriod.Monthly)
+            await AddMonthComparisonsAsync(insights, flagged, expenses.Select(e => (e.Amount, e.Category, e.ExpenseDate)).ToList(), first, last, today, isCurrent, month);
+
+        // 5. Savings goals
+        await AddGoalInsightsAsync(insights, today, isCurrent);
+
+        var order = new Dictionary<string, int> { ["Critical"] = 0, ["Warning"] = 1, ["Success"] = 2, ["Info"] = 3 };
+        return insights.OrderBy(i => order[i.Severity]).ToList();
+    }
+
+    private async Task AddMonthComparisonsAsync(List<InsightResponse> insights, HashSet<Category> flagged,
+        List<(decimal Amount, Category Category, DateOnly ExpenseDate)> expenses, DateOnly first, DateOnly last, DateOnly today, bool isCurrent, string month)
+    {
+        var userId = currentUser.Id;
         var span = isCurrent ? today.Day : last.Day;
         var prevFirst = first.AddMonths(-1);
         var prevEnd = prevFirst.AddDays(Math.Min(span, DateTime.DaysInMonth(prevFirst.Year, prevFirst.Month)) - 1);
@@ -136,8 +158,11 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
                 $"{c.Category} spending is {(up ? "up" : "down")} {Pct(Math.Abs(c.Change))} compared with the same days last month " +
                 $"({Peso(c.Now)} {periodText}, against {Peso(c.Before)}).", "expenses", true));
         }
+    }
 
-        // 5. Savings goals
+    private async Task AddGoalInsightsAsync(List<InsightResponse> insights, DateOnly today, bool isCurrent)
+    {
+        var userId = currentUser.Id;
         var goals = await db.SavingsGoals.AsNoTracking().Include(g => g.Transactions)
             .Where(g => g.UserId == userId && g.ArchivedAt == null).ToListAsync();
         foreach (var goal in goals)
@@ -161,19 +186,18 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
                     $"The target date for {goal.Name} has passed with {Peso(g.RemainingAmount)} still to go. You can set a new date.", "savings", true));
             }
         }
-
-        var order = new Dictionary<string, int> { ["Critical"] = 0, ["Warning"] = 1, ["Success"] = 2, ["Info"] = 3 };
-        return insights.OrderBy(i => order[i.Severity]).ToList();
     }
 
     public static string Peso(decimal amount) => (amount < 0 ? "-" : "") + "₱" + Math.Abs(amount).ToString("N2", Ph);
 
     private static string Pct(decimal percent) => $"{Math.Round(percent, 0, MidpointRounding.AwayFromZero)}%";
 
-    private static string DaysLeftText(int daysLeft) => daysLeft switch
+    // Nothing for a single day: "days left in the day" says nothing useful.
+    private static string DaysLeftText(BudgetWindow window, int daysLeft) => daysLeft switch
     {
+        _ when window.Period == BudgetPeriod.Daily => "",
         <= 0 => "",
-        1 => ", with today the last day of the month",
-        _ => $", with {daysLeft} days left in the month",
+        1 => $", with today the last day of the {window.Unit}",
+        _ => $", with {daysLeft} days left in the {window.Unit}",
     };
 }

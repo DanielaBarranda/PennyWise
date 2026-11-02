@@ -7,35 +7,25 @@ using PennyWise.Api.Validation;
 
 namespace PennyWise.Api.Controllers;
 
-// Insights, allowance and reports all take an optional ?month=YYYY-MM
-// (default: the current month in Manila time).
+// Insights and allowance take ?month=YYYY-MM or ?period=Weekly&date=YYYY-MM-DD
+// (see PeriodQuery); reports take ?month=YYYY-MM. Default: today, Manila time.
 [ApiController]
 [Route("api")]
 public class InsightsController(InsightService insights, AllowanceService allowance, ReportService reports, AppClock clock) : ControllerBase
 {
     [HttpGet("insights")]
-    public async Task<ActionResult<List<InsightResponse>>> Insights(string? month)
+    public async Task<ActionResult<List<InsightResponse>>> Insights(string? month, string? period, string? date)
     {
-        if (InvalidMonth(month)) return ValidationProblem(ModelState);
-        return await insights.GetAsync(month ?? clock.CurrentMonth());
+        if (PeriodQuery.Resolve(ModelState, month, period, date, clock.Today()) is not { } window) return ValidationProblem(ModelState);
+        return await insights.GetAsync(window);
     }
 
-    // GET /api/allowance?month=2026-10&period=Weekly (period defaults to the saved preference)
+    // GET /api/allowance?month=2026-10, or ?period=Weekly&date=2026-11-04
     [HttpGet("allowance")]
-    public async Task<ActionResult<AllowanceResponse>> Allowance(string? month, string? period)
+    public async Task<ActionResult<AllowanceResponse>> Allowance(string? month, string? period, string? date)
     {
-        if (InvalidMonth(month)) return ValidationProblem(ModelState);
-        AllowancePeriod? parsed = null;
-        if (period is not null)
-        {
-            if (!Enum.TryParse<AllowancePeriod>(period, ignoreCase: false, out var p) || !Enum.IsDefined(p) || int.TryParse(period, out _))
-            {
-                ModelState.AddModelError(nameof(period), "Period must be Daily, Weekly or Monthly.");
-                return ValidationProblem(ModelState);
-            }
-            parsed = p;
-        }
-        return await allowance.CalculateAsync(month ?? clock.CurrentMonth(), parsed);
+        if (PeriodQuery.Resolve(ModelState, month, period, date, clock.Today()) is not { } window) return ValidationProblem(ModelState);
+        return await allowance.CalculateAsync(window);
     }
 
     [HttpGet("reports/monthly")]

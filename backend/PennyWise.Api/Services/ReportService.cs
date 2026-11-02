@@ -25,8 +25,14 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         var prevFirst = first.AddMonths(-1);
         var prevLast = first.AddDays(-1);
 
+        // Only a monthly budget is the month's budget. Weekly and daily budgets are
+        // listed on their own below and never added up into a monthly figure.
         var budget = await db.Budgets.AsNoTracking().Include(b => b.CategoryLimits)
-            .FirstOrDefaultAsync(b => b.UserId == userId && b.Month == month);
+            .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == BudgetPeriod.Monthly && b.StartDate == first);
+        var periodBudgets = await db.Budgets.AsNoTracking()
+            .Where(b => b.UserId == userId && b.Period != BudgetPeriod.Monthly && b.StartDate >= first && b.StartDate <= last)
+            .OrderBy(b => b.StartDate).ThenBy(b => b.Period)
+            .ToListAsync();
         var expenses = await db.Expenses.AsNoTracking()
             .Where(e => e.UserId == userId && e.ExpenseDate >= prevFirst && e.ExpenseDate <= last)
             .Select(e => new { e.Amount, e.Category, e.ExpenseDate }).ToListAsync();
@@ -74,12 +80,28 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         var paid = billItems.Where(b => b.Status == "Paid").ToList();
         var unpaid = billItems.Where(b => b.Status != "Paid").ToList();
 
+        // Each weekly or daily budget with the spending inside its own dates (a week
+        // that starts this month may end next month).
+        var reportPeriodBudgets = new List<ReportPeriodBudget>();
+        foreach (var b in periodBudgets)
+        {
+            var window = BudgetWindow.For(b.Period, b.StartDate);
+            var spentInWindow = (await db.Expenses.AsNoTracking()
+                .Where(e => e.UserId == userId && e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
+                .Select(e => e.Amount).ToListAsync()).Sum();
+            reportPeriodBudgets.Add(new ReportPeriodBudget(b.Period.ToString(), window.Start, window.End, b.Amount, spentInWindow));
+        }
+
         var notes = new List<string>
         {
             "Income is not recorded in PennyWise, so this report shows no income or net cash flow.",
             "Bill payments recorded as expenses are already included in total spending; the bills section does not add them again.",
             "Savings deposits are money set aside, not spending, so they are not included in total spending.",
         };
+        if (reportPeriodBudgets.Count > 0)
+        {
+            notes.Add("Weekly and daily budgets are shown on their own, with the spending inside their own dates. They are not added up into a monthly budget.");
+        }
 
         return new MonthlyReportResponse(
             month,
@@ -94,7 +116,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             categories,
             new ReportSavings(contributions, withdrawals, contributions - withdrawals, reportGoals),
             new ReportBills(billItems.Count, paid.Count, unpaid.Count, paid.Sum(b => b.Amount), unpaid.Sum(b => b.Amount), billItems),
-            await insights.GetAsync(month),
+            reportPeriodBudgets,
+            await insights.GetAsync(BudgetWindow.For(BudgetPeriod.Monthly, first)),
             notes);
     }
 
@@ -109,7 +132,7 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         Row("PennyWise monthly report", r.Month);
         Row();
         Row("Summary", "Value");
-        Row("Budget", r.Budget);
+        Row("Monthly budget", r.Budget);
         Row("Total spent", r.TotalSpent);
         Row("Expenses recorded", r.ExpenseCount);
         Row("Budget used (%)", r.BudgetUsedPercent);
@@ -120,6 +143,12 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         Row("Category", "Spent", "Share of spending (%)", "Limit", $"Spent in {r.PreviousMonth}", "Change");
         foreach (var c in r.Categories) Row(c.Category, c.Total, c.SharePercent, c.Limit, c.PreviousTotal, c.Change);
         Row();
+        if (r.PeriodBudgets.Count > 0)
+        {
+            Row("Weekly or daily budget", "Start", "End", "Budget", "Spent");
+            foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.Spent);
+            Row();
+        }
         Row("Savings", "Value");
         Row("Deposited this month", r.Savings.Contributions);
         Row("Withdrawn this month", r.Savings.Withdrawals);

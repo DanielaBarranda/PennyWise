@@ -57,14 +57,14 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/logout` | | 204, cookie removed |
 | GET | `/api/auth/me` | | 200 `User`, or 204 when nobody is signed in |
 | PUT | `/api/auth/profile` | `{ name }` | 200 `User` (the email cannot be changed) |
-| PUT | `/api/auth/preferences` | `{ allowancePeriod }` (`Daily`, `Weekly` or `Monthly`) | 200 User |
+| PUT | `/api/auth/preferences` | `{ budgetPeriod }` (`Daily`, `Weekly` or `Monthly`: which budgets the dashboard shows) | 200 User |
 | GET | `/api/auth/avatar?v={avatarVersion}` | | 200 the signed-in user's photo (`image/jpeg`, `image/png` or `image/webp`), or 404 |
 | PUT | `/api/auth/avatar` | the image bytes (`Content-Type: image/…`) | 200 User |
 | DELETE | `/api/auth/avatar` | | 200 User |
 | POST | `/api/auth/change-password` | `{ currentPassword, newPassword, confirmPassword }` | 204; this browser stays signed in, every other device is signed out |
 | POST | `/api/auth/delete-account` | `{ password }` | 204, signed out. Deletes the account and all of its data; 400 if the password is wrong |
 
-User is `{ id, name, email, memberSince, allowancePeriod, avatarVersion }`. `avatarVersion` is
+User is `{ id, name, email, memberSince, budgetPeriod, avatarVersion }`. `avatarVersion` is
 `null` when there is no profile photo and changes whenever the photo does.
 
 Deleting an account removes the user and, through cascading foreign keys, every budget,
@@ -89,19 +89,29 @@ and a wrong password both return the same 401 message. Password hashes are never
   "expenseDate": "2026-10-05", "createdAt": "2026-10-05T04:12:00Z", "updatedAt": "2026-10-05T04:12:00Z" }
 ```
 
-**Budget** (one per month)
+**Budget** (one per day, week or month)
 ```json
-{ "id": 3, "month": "2026-10", "amount": 8000.00,
-  "categoryLimits": [ { "category": "Food", "amount": 3000.00 } ] }
+{ "id": 3, "period": "Weekly", "start": "2026-11-02", "end": "2026-11-08", "month": "2026-11",
+  "amount": 1000.00, "categoryLimits": [ { "category": "Food", "amount": 400.00 } ] }
 ```
+A budget covers exactly one period: a day, a week (Monday to Sunday) or a calendar month.
+Nothing is converted between periods: a ₱1,000 weekly budget is ₱1,000 for that week and never
+turns into a monthly figure. Each period has at most one budget; periods may overlap (a week can
+have a budget while its month has one too, or none).
+
+**Choosing a period in a query.** The dashboard, allowance and insights endpoints (and the budget
+list) take either `?month=YYYY-MM` (that month) or `?period=Daily|Weekly|Monthly&date=YYYY-MM-DD`
+(the day, week or month containing that date). Without either, they use the current month.
 
 ## Endpoints
 
 ### Dashboard
-`GET /api/dashboard/summary?month=YYYY-MM` (defaults to the current month)
+`GET /api/dashboard/summary?month=YYYY-MM` or `?period=Weekly&date=YYYY-MM-DD` (defaults to the current month).
+Everything in it is for that one period: its own budget and the expenses dated inside it.
 
 ```json
 {
+  "period": "Monthly", "start": "2026-10-01", "end": "2026-10-31",
   "month": "2026-10",
   "budget": { "...Budget object..." },
   "totalSpent": 6720.50,
@@ -117,17 +127,22 @@ and a wrong password both return the same 401 message. Password hashes are never
 }
 ```
 
-- `budget` is `null` when the month has no budget. In that case `remaining` and `percentSpent` are `null`, and `status` is `"NoBudget"`.
+- `budget` is `null` when the period has no budget. In that case `remaining` and `percentSpent` are `null`, and `status` is `"NoBudget"`.
 - `status` is `"OnTrack"` below 80%, `"Warning"` from 80% up to 100%, and `"Exceeded"` above 100%.
 - `categories` always has all six categories. Each one's `status` is `"NoLimit"`, `"OnTrack"`, `"Warning"` or `"Exceeded"`.
 
 ### Budgets
 | Method | Route | Body | Success |
 |---|---|---|---|
-| GET | `/api/budgets?month=YYYY-MM` | | 200, array of Budget (`month` is optional) |
+| GET | `/api/budgets?month=YYYY-MM` | | 200, every budget starting in that month, any period (`month` is optional) |
+| GET | `/api/budgets?period=Weekly&date=YYYY-MM-DD` | | 200, the budget for the week containing that date (an empty array if none) |
 | GET | `/api/budgets/{id}` | | 200 Budget, or 404 |
-| POST | `/api/budgets` | `{ month, amount, categoryLimits[] }` | 201 Budget, or 409 if the month already has one |
-| PUT | `/api/budgets/{id}` | `{ month, amount, categoryLimits[] }` | 200 Budget |
+| POST | `/api/budgets` | `{ period, start, amount, categoryLimits[] }` | 201 Budget, or 409 if that period already has one |
+| PUT | `/api/budgets/{id}` | `{ period, start, amount, categoryLimits[] }` | 200 Budget |
+| DELETE | `/api/budgets/{id}` | | 204; the period has no budget again (expenses are not touched) |
+
+`period` defaults to `Monthly`. A monthly budget may send `month` instead of `start`. `start` must
+be the first day of the period: any day for Daily, a Monday for Weekly, the 1st for Monthly.
 
 Validation: each category can appear at most once in `categoryLimits`, and all the limits together cannot add up to more than `amount`.
 
@@ -183,21 +198,21 @@ Occurrence: `{ billId, name, amount, category, frequency, dueDate, status: "Paid
 the app only; no email or push notifications are sent.
 
 ### Allowance
-`GET /api/allowance?month=YYYY-MM&period=Daily|Weekly|Monthly` (period defaults to the saved preference)
+`GET /api/allowance?month=YYYY-MM` or `?period=Weekly&date=YYYY-MM-DD`
 
 ```json
-{ "month": "2026-10", "period": "Daily", "status": "Available", "budget": 10000, "spent": 1749,
-  "reservedForBills": 599, "available": 7652, "daysLeft": 3, "daysLeftInWeek": 3,
-  "amount": 2550.66, "daily": 2550.66, "weekly": 7651.98, "monthly": 7652 }
+{ "period": "Weekly", "start": "2026-11-02", "end": "2026-11-08", "status": "Available",
+  "budget": 1000, "spent": 250, "reservedForBills": 0, "available": 750,
+  "daysLeft": 7, "daily": 107.14, "total": 750 }
 ```
 
-`available = budget − spent − unpaid bills due this month` (overdue ones included). Daily is
-what is left divided by the days left (today included, Manila time), rounded down to the
-centavo; weekly is daily × days left until Sunday; monthly is everything left. `status` is
-`Available`, `OverBudget`, `MonthEnded` or `NoBudget`.
+`available = budget − spent in the period − unpaid bills due in the period` (overdue ones
+included). `daily` is what is left divided by the days left in the period (today included,
+Manila time), rounded down to the centavo; `total` is everything left. Only that period's own
+budget is used. `status` is `Available`, `OverBudget`, `Ended` or `NoBudget`.
 
 ### Insights
-`GET /api/insights?month=YYYY-MM` returns rule-based notes, most urgent first:
+`GET /api/insights?month=YYYY-MM` (or `?period=Weekly&date=YYYY-MM-DD`) returns rule-based notes for that period, most urgent first:
 `{ key, severity: "Critical" | "Warning" | "Success" | "Info", kind: "Fact" | "Suggestion",
 title, message, link, dismissible }`. Critical ones (overdue bills, budget exceeded) cannot be
 dismissed. Dismissals are remembered in the browser, per account.
@@ -206,6 +221,10 @@ dismissed. Dismissals are remembered in the browser, per account.
 - `GET /api/reports/monthly?month=YYYY-MM`: budget, total spent, comparison with the
   previous month, categories, savings, bills, insights and notes.
 - `GET /api/reports/monthly.csv?month=YYYY-MM`: the same report as a CSV download (UTF-8).
+
+The report's budget is the month's own monthly budget. Weekly and daily budgets starting in the
+month are listed separately (`periodBudgets`: period, start, end, amount, and the spending inside
+their own dates); they are never added up into a monthly budget.
 
 Paid bills recorded as expenses are counted once, in spending. Income is not recorded in
 PennyWise, so the report shows no income or net cash flow.
