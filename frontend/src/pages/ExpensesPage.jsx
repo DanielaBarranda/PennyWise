@@ -48,6 +48,7 @@ export default function ExpensesPage({ month, onMonthChange }) {
         title="Expenses"
         subtitle="Every expense you have recorded, by month."
         controls={<MonthPicker month={month} onChange={onMonthChange} />}
+        controlsTour="expenses-month"
       >
         <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
           <Icon name="plus" />
@@ -65,7 +66,7 @@ export default function ExpensesPage({ month, onMonthChange }) {
             </p>
           )}
         </div>
-        <div className="card__toolbar">
+        <div className="card__toolbar" data-tour="expenses-filter">
           <CategoryFilter value={category} onChange={setCategory} />
         </div>
 

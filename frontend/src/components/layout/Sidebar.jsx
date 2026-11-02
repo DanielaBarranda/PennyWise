@@ -56,14 +56,15 @@ function NavLinks({ route, onNavigate }) {
 // Tablets and phones: a top bar with a hamburger button that opens the menu in a
 // slide-in panel. The panel is a native <dialog>, so focus stays inside it while
 // open, Escape closes it, and focus returns to the hamburger button afterwards.
-// "Take the tour" sits at the bottom of the menu, apart from the pages.
+// "Tour this page" sits at the bottom of the menu, apart from the pages. It
+// tours only the page you are on (the full tour is on the Profile page).
 function TourButton({ onClick, tourMarker = false }) {
   return (
     <button type="button" className="nav__link nav__tour" onClick={onClick} data-tour={tourMarker ? 'tour-button' : undefined}>
       <Icon name="help" size={20} />
-      <span className="nav__label">Take the tour</span>
+      <span className="nav__label">Tour this page</span>
       <span className="nav__tooltip" aria-hidden="true">
-        Take the tour
+        Tour this page
       </span>
     </button>
   )

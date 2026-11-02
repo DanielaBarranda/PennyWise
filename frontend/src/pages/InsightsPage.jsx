@@ -32,7 +32,7 @@ export default function InsightsPage({ period, start, onStartChange }) {
         }
       />
       <section className="card" aria-labelledby="insights-heading">
-        <div className="card__header">
+        <div className="card__header" data-tour="insights-list">
           <h2 id="insights-heading">{periodLabel(period, start)}</h2>
           {hiddenCount > 0 && <p className="card__meta">{hiddenCount} hidden</p>}
         </div>

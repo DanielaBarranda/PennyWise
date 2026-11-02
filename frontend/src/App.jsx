@@ -18,6 +18,7 @@ import PwaNotice from './components/common/PwaNotice.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useHashRoute } from './hooks/useHashRoute.js'
 import Tour from './components/tour/Tour.jsx'
+import { fullTour, pageTour } from './components/tour/tourSteps.js'
 import { useSidebarCollapsed } from './hooks/useSidebarCollapsed.js'
 import { useTheme } from './hooks/useTheme.js'
 import { periodStart } from './utils/budgetPeriod.js'
@@ -85,16 +86,14 @@ function Routes({ theme, onToggleTheme }) {
 
 function Workspace({ route, theme, onToggleTheme }) {
   const { user, setTourCompleted } = useAuth()
-  // The tour opens by itself until the account has finished or skipped it once;
-  // "Take the tour" in the menu opens it again. It always runs on the Dashboard.
-  const [tourOpen, setTourOpen] = useState(() => !user.tourCompleted)
-  useEffect(() => {
-    if (tourOpen && route !== 'dashboard') window.location.hash = '#/dashboard'
-  }, [tourOpen, route])
+  // The full tour (every page) opens by itself until the account has finished
+  // or skipped it once. "Tour this page" in the menu tours only the current page;
+  // "Take the full tour" on Profile replays the whole thing.
+  const [tour, setTour] = useState(() => (user.tourCompleted ? null : { full: true, steps: fullTour() }))
   const endTour = () => {
-    setTourOpen(false)
     // Not being able to save this only means the tour shows again next time.
-    if (!user.tourCompleted) setTourCompleted(true).catch(() => {})
+    if (tour?.full && !user.tourCompleted) setTourCompleted(true).catch(() => {})
+    setTour(null)
   }
   // The selected month is shared, so switching pages keeps the same month.
   const [month, setMonth] = useState(currentMonth)
@@ -117,15 +116,22 @@ function Workspace({ route, theme, onToggleTheme }) {
 
   return (
     <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
-      <Sidebar route={route} collapsed={collapsed} theme={theme} onToggleTheme={onToggleTheme} onStartTour={() => setTourOpen(true)} />
+      <Sidebar route={route} collapsed={collapsed} theme={theme} onToggleTheme={onToggleTheme} onStartTour={() => setTour({ full: false, steps: pageTour(route) })} />
       <div className="content">
         <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={onToggleTheme} />
         <main id="main" className="main" tabIndex={-1}>
           <PwaNotice />
-          <Page month={month} onMonthChange={setMonth} period={period} start={start} onStartChange={onStartChange} />
+          <Page
+            month={month}
+            onMonthChange={setMonth}
+            period={period}
+            start={start}
+            onStartChange={onStartChange}
+            onStartFullTour={() => setTour({ full: true, steps: fullTour() })}
+          />
         </main>
       </div>
-      <Tour open={tourOpen && route === 'dashboard'} userName={user.name} onClose={endTour} />
+      <Tour steps={tour?.steps ?? null} route={route} userName={user.name} onClose={endTour} />
     </div>
   )
 }

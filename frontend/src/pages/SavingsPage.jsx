@@ -32,7 +32,7 @@ export default function SavingsPage() {
 
   return (
     <>
-      <PageHeader title="Savings goals" subtitle="Set money aside for the things that matter to you.">
+      <PageHeader title="Savings goals" subtitle="Set money aside for the things that matter to you." actionsTour="savings-add">
         <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
           <Icon name="plus" />
           New goal
@@ -55,7 +55,7 @@ export default function SavingsPage() {
       ) : !goals ? (
         <LoadingState label="Loading goals…" variant="card" />
       ) : goals.length === 0 ? (
-        <div className="card">
+        <div className="card" data-tour="savings-empty">
           <EmptyState
             title="No savings goals yet"
             message="Create a goal, then record what you set aside for it."
@@ -119,7 +119,7 @@ function GoalCard({ goal, onDeposit, onWithdraw, onHistory, onEdit, onArchive })
         : { tone: 'warning', text: `${formatPeso(goal.expectedByToday - goal.savedAmount)} behind an even pace` }
 
   return (
-    <article className={`card goal goal--${goal.status.toLowerCase()}`} aria-labelledby={`goal-${goal.id}`}>
+    <article className={`card goal goal--${goal.status.toLowerCase()}`} aria-labelledby={`goal-${goal.id}`} data-tour="savings-goal">
       <div className="goal__head">
         <h2 id={`goal-${goal.id}`}>{goal.name}</h2>
         <span className={`status-badge status-badge--${goal.status === 'Completed' ? 'ok' : archived ? 'muted' : 'info'}`}>

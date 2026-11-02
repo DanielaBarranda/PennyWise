@@ -1325,3 +1325,16 @@
     width: 100%;
   }
 }
+
+.profile__tour {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.profile__tour .profile__hint {
+  margin: 0;
+}

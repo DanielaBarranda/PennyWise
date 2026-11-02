@@ -5,7 +5,8 @@ import { useEffect, useRef } from 'react'
 // `controls` (e.g. the month picker) sits apart from the action buttons so
 // navigating the data and changing it never look alike.
 // `docTitle` names the browser tab when the visible heading is a greeting.
-export default function PageHeader({ title, docTitle, subtitle, controls, children }) {
+// `controlsTour` / `actionsTour` mark the two groups for the app tour.
+export default function PageHeader({ title, docTitle, subtitle, controls, controlsTour, actionsTour, children }) {
   const headingRef = useRef(null)
 
   useEffect(() => {
@@ -22,8 +23,8 @@ export default function PageHeader({ title, docTitle, subtitle, controls, childr
         {subtitle && <p className="page-header__subtitle">{subtitle}</p>}
       </div>
       <div className="page-header__tools">
-        {controls && <div className="page-header__controls">{controls}</div>}
-        {children && <div className="page-header__actions">{children}</div>}
+        {controls && <div className="page-header__controls" data-tour={controlsTour}>{controls}</div>}
+        {children && <div className="page-header__actions" data-tour={actionsTour}>{children}</div>}
       </div>
     </div>
   )

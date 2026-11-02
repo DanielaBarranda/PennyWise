@@ -71,7 +71,7 @@ export default function BillsPage() {
 
   return (
     <>
-      <PageHeader title="Bills" subtitle="Keep track of what’s due and what’s already paid.">
+      <PageHeader title="Bills" subtitle="Keep track of what’s due and what’s already paid." actionsTour="bills-add">
         <button type="button" className="button button--primary" onClick={() => setEditing(null)}>
           <Icon name="plus" />
           New bill
@@ -84,7 +84,7 @@ export default function BillsPage() {
       </p>
 
       <section className="card" aria-labelledby="due-heading">
-        <div className="card__header">
+        <div className="card__header" data-tour="bills-due">
           <h2 id="due-heading">Due dates</h2>
           <p className="card__meta">Last 60 days and the next 60 days</p>
         </div>

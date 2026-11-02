@@ -26,6 +26,7 @@ export default function ReportsPage({ month, onMonthChange }) {
         title="Monthly report"
         subtitle={`Your money in ${formatMonth(month)}, from your saved records.`}
         controls={<MonthPicker month={month} onChange={onMonthChange} />}
+        actionsTour="reports-export"
       >
         <a className="button button--secondary" href={api.monthlyReportCsvUrl(month)} download>
           <Icon name="download" />
@@ -42,12 +43,12 @@ export default function ReportsPage({ month, onMonthChange }) {
       ) : !report ? (
         <LoadingState label="Loading report…" variant="card" />
       ) : isEmpty ? (
-        <div className="card">
+        <div className="card" data-tour="reports-empty">
           <EmptyState title={`Nothing recorded for ${formatMonth(month)}`} message="Reports fill in as you record expenses, budgets, bills and savings." />
         </div>
       ) : (
         <div className="report">
-          <section className="report__summary" aria-label="Summary">
+          <section className="report__summary" aria-label="Summary" data-tour="reports-summary">
             <Figure label="Monthly budget" value={report.budget == null ? 'Not set' : formatPeso(report.budget)} />
             <Figure label="Total spent" value={formatPeso(report.totalSpent)} note={`${report.expenseCount} expense${report.expenseCount === 1 ? '' : 's'}`} />
             <Figure label="Budget used" value={report.budgetUsedPercent == null ? '—' : `${report.budgetUsedPercent}%`}

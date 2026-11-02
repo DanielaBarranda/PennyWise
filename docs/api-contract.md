@@ -76,8 +76,9 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/two-factor/recovery-codes` | `{ code }` | 200 `{ recoveryCodes }`; the old ones stop working |
 
 User is `{ id, name, email, memberSince, budgetPeriod, avatarVersion, hasPassword, googleConnected,
-twoFactorEnabled, recoveryCodesLeft, tourCompleted }`. The app tour opens by itself on the
-Dashboard while `tourCompleted` is false; it is saved on the account, so it never comes back on
+twoFactorEnabled, recoveryCodesLeft, tourCompleted }`. The full app tour (every page, in turn) opens by
+itself while `tourCompleted` is false; "Tour this page" in the menu tours only the current page,
+and "Take the full tour" on Profile replays everything. `tourCompleted` is saved on the account, so it never comes back on
 another device once finished or skipped. `avatarVersion` is `null` when there is no profile photo
 and changes whenever the photo does.
 

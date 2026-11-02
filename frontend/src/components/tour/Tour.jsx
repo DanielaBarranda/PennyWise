@@ -1,55 +1,17 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import Icon from '../common/Icon.jsx'
 
-// The app tour: a short walk through the Dashboard. Each step dims the page and
-// highlights one real part of it (found by its data-tour="…" marker), with a
-// card explaining it. A step whose part is not on screen (e.g. the sidebar on a
-// phone) shows its card in the middle instead.
+import { PAGE_NAMES } from './tourSteps.js'
+
+// The app tour. Each step dims the page and highlights one real part of it
+// (found by its data-tour="…" marker), with a card explaining it. A step whose
+// part is not on screen (e.g. the sidebar on a phone) shows its card in the
+// middle instead. The steps come from tourSteps.js: the full tour (every page,
+// opening each one in turn) or just the current page's steps.
 //
 // Built on a full-screen native <dialog>: keyboard focus stays in the card,
 // Escape skips the tour, and focus returns to where it was afterwards.
-const STEPS = [
-  {
-    title: (name) => `Welcome to PennyWise, ${name}`,
-    body: 'This quick tour shows you around. It takes about a minute, and you can skip it at any time.',
-  },
-  {
-    targets: ['period'],
-    title: 'Choose how you budget',
-    body: 'Budget by the day, the week or the month. Each period has its own budget, and the arrows move between them.',
-  },
-  {
-    targets: ['budget'],
-    title: 'Set your budget',
-    body: 'Set how much you plan to spend in this period, plus optional limits for categories like Food or School.',
-  },
-  {
-    targets: ['add-expense'],
-    title: 'Log what you spend',
-    body: 'Add each expense as it happens. It counts against your budget right away, and PennyWise warns you before you overspend.',
-  },
-  {
-    targets: ['left-to-spend'],
-    title: 'See what’s left',
-    body: 'How much you can still spend in this period, after spending and unpaid bills. Switch to Per day to see a daily amount.',
-  },
-  {
-    targets: ['nav', 'menu-button'],
-    title: 'Everything else is here',
-    body: 'Expenses lists everything you’ve logged. Savings tracks your goals, Bills reminds you what’s due, Insights points out patterns, and Reports gives a monthly summary you can download.',
-  },
-  {
-    targets: ['account'],
-    title: 'Your profile',
-    body: 'Change your photo, your budget period, and turn on two-step verification to keep your account safe.',
-  },
-  {
-    targets: ['tour-button', 'menu-button'],
-    title: 'See this again anytime',
-    body: 'Use Take the tour at the bottom of the menu whenever you want a refresher.',
-  },
-]
-
+const NO_STEP = {} // while no tour is running
 const GAP = 12 // space between the highlighted part and the card
 const PAD = 6 // highlight padding around the part
 
@@ -64,7 +26,9 @@ function findTarget(names = []) {
   return null
 }
 
-export default function Tour({ open, userName, onClose }) {
+// `steps` is null while no tour is running.
+export default function Tour({ steps, route, userName, onClose }) {
+  const open = steps !== null
   const dialogRef = useRef(null)
   const cardRef = useRef(null)
   const nextRef = useRef(null)
@@ -74,8 +38,10 @@ export default function Tour({ open, userName, onClose }) {
   // { index, hole, card } in viewport pixels; ignored once the step has moved on.
   const [placed, setLayout] = useState(null)
   const layout = placed?.index === index ? placed : null
-  const step = STEPS[index]
-  const last = index === STEPS.length - 1
+  const step = steps?.[index] ?? NO_STEP
+  const last = index === (steps?.length ?? 0) - 1
+  const welcome = steps?.[0]?.welcome ? 1 : 0
+  const total = (steps?.length ?? 0) - welcome
 
   // Finishing or skipping; the next opening starts from the welcome again.
   const finish = () => {
@@ -122,13 +88,18 @@ export default function Tour({ open, userName, onClose }) {
   // On each step: bring the part into view, then place everything and move focus.
   useEffect(() => {
     if (!open) return
+    // The step is on another page: open it first (this runs again once it has).
+    if (step.route && step.route !== route) {
+      window.location.hash = `#/${step.route}`
+      return
+    }
     let cancelled = false
     let tries = 0
-    // The Dashboard may still be loading its cards; wait briefly for the part.
+    // The page may still be loading its cards; wait briefly for the part.
     const settle = () => {
       if (cancelled) return
       const target = findTarget(step.targets)
-      if (!target && step.targets && tries++ < 15) return setTimeout(settle, 100)
+      if (!target && step.targets && tries++ < 30) return setTimeout(settle, 100)
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
       setTimeout(() => {
@@ -141,7 +112,7 @@ export default function Tour({ open, userName, onClose }) {
     return () => {
       cancelled = true
     }
-  }, [open, step, place])
+  }, [open, step, route, place])
 
   useEffect(() => {
     if (!open) return
@@ -193,7 +164,7 @@ export default function Tour({ open, userName, onClose }) {
             style={layout ? { left: layout.card.left, top: layout.card.top } : { visibility: 'hidden' }}
           >
             <p className="tour__count" aria-live="polite">
-              {index === 0 ? 'App tour' : `${index} of ${STEPS.length - 1}`}
+              {step.welcome ? 'App tour' : `${PAGE_NAMES[step.route]}: ${index - welcome + 1} of ${total}`}
             </p>
             <h2 id={titleId} className="tour__title">
               {typeof step.title === 'function' ? step.title(firstName) : step.title}
@@ -202,7 +173,7 @@ export default function Tour({ open, userName, onClose }) {
             <div className="tour__actions">
               {!last && (
                 <button type="button" className="button button--link tour__skip" onClick={finish}>
-                  {index === 0 ? 'Skip tour' : 'Skip'}
+                  {step.welcome ? 'Skip tour' : 'Skip'}
                 </button>
               )}
               {index > 0 && (
@@ -212,7 +183,7 @@ export default function Tour({ open, userName, onClose }) {
                 </button>
               )}
               <button ref={nextRef} type="button" className="button button--primary button--small" onClick={next}>
-                {index === 0 ? 'Start tour' : last ? 'Done' : 'Next'}
+                {step.welcome ? 'Start tour' : last ? 'Done' : 'Next'}
                 {!last && <Icon name="chevronRight" size={16} />}
               </button>
             </div>

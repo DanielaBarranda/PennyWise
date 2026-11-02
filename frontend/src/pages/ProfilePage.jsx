@@ -16,7 +16,7 @@ import { PASSWORD_RULES } from '../utils/authValidation.js'
 import { formatDate } from '../utils/format.js'
 import { resizeAvatar } from '../utils/resizeImage.js'
 
-export default function ProfilePage() {
+export default function ProfilePage({ onStartFullTour }) {
   const { user, logout } = useAuth()
 
   return (
@@ -43,7 +43,7 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <section className="card" aria-labelledby="security-heading">
+          <section className="card" aria-labelledby="security-heading" data-tour="profile-security">
             <div className="card__header">
               <h2 id="security-heading">Sign-in and security</h2>
             </div>
@@ -61,7 +61,7 @@ export default function ProfilePage() {
           )}
         </div>
         <div className="profile__column">
-          <section className="card" aria-labelledby="preferences-heading">
+          <section className="card" aria-labelledby="preferences-heading" data-tour="profile-preferences">
             <div className="card__header">
               <h2 id="preferences-heading">Preferences</h2>
             </div>
@@ -73,6 +73,13 @@ export default function ProfilePage() {
               <h2 id="app-heading">PennyWise app</h2>
             </div>
             <InstallApp />
+            <div className="profile__tour">
+              <p className="profile__hint">New here, or want a refresher? The full tour walks through every page in about two minutes.</p>
+              <button type="button" className="button button--secondary" onClick={onStartFullTour}>
+                <Icon name="help" />
+                Take the full tour
+              </button>
+            </div>
           </section>
 
           <section className="card profile__danger" aria-labelledby="delete-heading">
