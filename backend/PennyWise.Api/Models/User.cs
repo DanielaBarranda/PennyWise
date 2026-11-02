@@ -56,5 +56,9 @@ public class User
     // to the photo URL, so a new photo is never hidden by an old cached one.
     public DateTime? AvatarUpdatedAt { get; set; }
 
+    // When the app tour was finished or skipped (null = show it on the next visit).
+    // Kept on the account, so it does not come back on another device.
+    public DateTime? TourCompletedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

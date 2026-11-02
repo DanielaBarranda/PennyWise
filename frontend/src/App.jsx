@@ -17,6 +17,7 @@ import OfflineScreen from './components/common/OfflineScreen.jsx'
 import PwaNotice from './components/common/PwaNotice.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useHashRoute } from './hooks/useHashRoute.js'
+import Tour from './components/tour/Tour.jsx'
 import { useSidebarCollapsed } from './hooks/useSidebarCollapsed.js'
 import { useTheme } from './hooks/useTheme.js'
 import { periodStart } from './utils/budgetPeriod.js'
@@ -83,7 +84,18 @@ function Routes({ theme, onToggleTheme }) {
 }
 
 function Workspace({ route, theme, onToggleTheme }) {
-  const { user } = useAuth()
+  const { user, setTourCompleted } = useAuth()
+  // The tour opens by itself until the account has finished or skipped it once;
+  // "Take the tour" in the menu opens it again. It always runs on the Dashboard.
+  const [tourOpen, setTourOpen] = useState(() => !user.tourCompleted)
+  useEffect(() => {
+    if (tourOpen && route !== 'dashboard') window.location.hash = '#/dashboard'
+  }, [tourOpen, route])
+  const endTour = () => {
+    setTourOpen(false)
+    // Not being able to save this only means the tour shows again next time.
+    if (!user.tourCompleted) setTourCompleted(true).catch(() => {})
+  }
   // The selected month is shared, so switching pages keeps the same month.
   const [month, setMonth] = useState(currentMonth)
   // The dashboard and insights follow the account's budget period: a month (the
@@ -105,7 +117,7 @@ function Workspace({ route, theme, onToggleTheme }) {
 
   return (
     <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
-      <Sidebar route={route} collapsed={collapsed} theme={theme} onToggleTheme={onToggleTheme} />
+      <Sidebar route={route} collapsed={collapsed} theme={theme} onToggleTheme={onToggleTheme} onStartTour={() => setTourOpen(true)} />
       <div className="content">
         <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={onToggleTheme} />
         <main id="main" className="main" tabIndex={-1}>
@@ -113,6 +125,7 @@ function Workspace({ route, theme, onToggleTheme }) {
           <Page month={month} onMonthChange={setMonth} period={period} start={start} onStartChange={onStartChange} />
         </main>
       </div>
+      <Tour open={tourOpen && route === 'dashboard'} userName={user.name} onClose={endTour} />
     </div>
   )
 }

@@ -68,7 +68,7 @@ export default function AccountMenu() {
   }
 
   return (
-    <div className="account-menu" ref={rootRef}>
+    <div className="account-menu" ref={rootRef} data-tour="account">
       <button
         ref={buttonRef}
         id={buttonId}

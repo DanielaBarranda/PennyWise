@@ -63,6 +63,7 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/logout` | | 204, cookie removed |
 | GET | `/api/auth/me` | | 200 `User`, or 204 when nobody is signed in |
 | PUT | `/api/auth/profile` | `{ name }` | 200 `User` (the email cannot be changed) |
+| PUT | `/api/auth/tour` | `{ completed }` (`true` when the app tour is finished or skipped, `false` to show it again) | 200 User |
 | PUT | `/api/auth/preferences` | `{ budgetPeriod }` (`Daily`, `Weekly` or `Monthly`: which budgets the dashboard shows) | 200 User |
 | GET | `/api/auth/avatar?v={avatarVersion}` | | 200 the signed-in user's photo (`image/jpeg`, `image/png` or `image/webp`), or 404 |
 | PUT | `/api/auth/avatar` | the image bytes (`Content-Type: image/…`) | 200 User |
@@ -75,7 +76,9 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/two-factor/recovery-codes` | `{ code }` | 200 `{ recoveryCodes }`; the old ones stop working |
 
 User is `{ id, name, email, memberSince, budgetPeriod, avatarVersion, hasPassword, googleConnected,
-twoFactorEnabled, recoveryCodesLeft }`. `avatarVersion` is `null` when there is no profile photo
+twoFactorEnabled, recoveryCodesLeft, tourCompleted }`. The app tour opens by itself on the
+Dashboard while `tourCompleted` is false; it is saved on the account, so it never comes back on
+another device once finished or skipped. `avatarVersion` is `null` when there is no profile photo
 and changes whenever the photo does.
 
 **Sign-in steps.** When signing in needs one more step, the API answers with

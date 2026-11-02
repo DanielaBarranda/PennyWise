@@ -56,7 +56,20 @@ function NavLinks({ route, onNavigate }) {
 // Tablets and phones: a top bar with a hamburger button that opens the menu in a
 // slide-in panel. The panel is a native <dialog>, so focus stays inside it while
 // open, Escape closes it, and focus returns to the hamburger button afterwards.
-export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
+// "Take the tour" sits at the bottom of the menu, apart from the pages.
+function TourButton({ onClick, tourMarker = false }) {
+  return (
+    <button type="button" className="nav__link nav__tour" onClick={onClick} data-tour={tourMarker ? 'tour-button' : undefined}>
+      <Icon name="help" size={20} />
+      <span className="nav__label">Take the tour</span>
+      <span className="nav__tooltip" aria-hidden="true">
+        Take the tour
+      </span>
+    </button>
+  )
+}
+
+export default function Sidebar({ route, collapsed, theme, onToggleTheme, onStartTour }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const drawerRef = useRef(null)
 
@@ -78,10 +91,14 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
     <aside id="sidebar" className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <Brand />
 
-      <nav className="nav" aria-label="Main">
+      <nav className="nav" aria-label="Main" data-tour="nav">
         <p className="nav__heading">Menu</p>
         <NavLinks route={route} />
       </nav>
+
+      <div className="sidebar__footer">
+        <TourButton onClick={onStartTour} tourMarker />
+      </div>
 
       <div className="sidebar__mobile-actions">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} className="sidebar__theme" />
@@ -89,6 +106,7 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
         <button
           type="button"
           className="icon-button sidebar__menu-button"
+          data-tour="menu-button"
           onClick={() => setMenuOpen(true)}
           aria-controls="mobile-menu"
           aria-expanded={menuOpen}
@@ -119,6 +137,14 @@ export default function Sidebar({ route, collapsed, theme, onToggleTheme }) {
         <nav className="drawer__nav" aria-label="Main">
           <NavLinks route={route} onNavigate={() => setMenuOpen(false)} />
         </nav>
+        <div className="drawer__footer">
+          <TourButton
+            onClick={() => {
+              setMenuOpen(false)
+              onStartTour()
+            }}
+          />
+        </div>
       </dialog>
     </aside>
   )

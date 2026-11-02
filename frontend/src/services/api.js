@@ -128,6 +128,7 @@ export const api = {
   deleteExpense: (id) => request(`/expenses/${id}`, { method: 'DELETE' }),
 
   updatePreferences: (prefs) => request('/auth/preferences', { method: 'PUT', body: prefs }),
+  updateTour: (completed) => request('/auth/tour', { method: 'PUT', body: { completed } }),
 
   getSavingsGoals: (includeArchived = false) => request('/savings', { query: { includeArchived } }),
   createSavingsGoal: (goal) => request('/savings', { method: 'POST', body: goal }),

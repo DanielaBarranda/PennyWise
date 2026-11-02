@@ -116,6 +116,13 @@ public class GoogleLinkRequest
 
 // Sent instead of the user when sign-in needs another step. Next is
 // "twoFactor" (ask for the code) or "linkGoogle" (ask for the password once).
+// Finished or skipped the app tour (true), or show it again (false).
+public class TourRequest
+{
+    [Required(ErrorMessage = "Say whether the tour is completed.")]
+    public bool? Completed { get; set; }
+}
+
 public record SignInStep(string Next, string Ticket, string? Email = null);
 
 public record TwoFactorSetupResponse(string Key, string Uri);
@@ -130,9 +137,9 @@ public record AuthOptionsResponse(string? GoogleClientId);
 // AvatarVersion is null when there is no profile photo; otherwise it changes
 // whenever the photo does, and goes on the photo URL to bust the cache.
 public record UserResponse(int Id, string Name, string Email, DateTime MemberSince, string BudgetPeriod, string? AvatarVersion,
-    bool HasPassword, bool GoogleConnected, bool TwoFactorEnabled, int RecoveryCodesLeft)
+    bool HasPassword, bool GoogleConnected, bool TwoFactorEnabled, int RecoveryCodesLeft, bool TourCompleted)
 {
     public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt, u.BudgetPeriod.ToString(),
         u.AvatarUpdatedAt is { } t ? t.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture) : null,
-        u.HasPassword, u.GoogleSubject is not null, u.TwoFactorEnabled, TwoFactorService.RecoveryCodesLeft(u));
+        u.HasPassword, u.GoogleSubject is not null, u.TwoFactorEnabled, TwoFactorService.RecoveryCodesLeft(u), u.TourCompletedAt is not null);
 }

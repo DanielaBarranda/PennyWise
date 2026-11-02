@@ -345,6 +345,9 @@ namespace PennyWise.Api.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("TourCompletedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("TwoFactorEnabledAt")
                         .HasColumnType("TEXT");
 

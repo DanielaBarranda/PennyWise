@@ -18,7 +18,7 @@ export default function AllowanceCard({ period, start, refreshKey }) {
   const showViews = period !== 'Daily' && (allowance?.status === 'Available' || allowance?.status === 'OverBudget')
 
   return (
-    <section className="card allowance" aria-labelledby="allowance-heading">
+    <section className="card allowance" aria-labelledby="allowance-heading" data-tour="left-to-spend">
       <div className="card__header">
         <h2 id="allowance-heading">Left to spend</h2>
         {showViews && (

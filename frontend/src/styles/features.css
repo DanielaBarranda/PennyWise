@@ -1187,3 +1187,141 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ================= App tour ================= */
+/* The tour is a full-screen, see-through <dialog>. The highlight is a box with an
+   enormous shadow: the shadow dims everything except the part being explained. */
+.tour {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.tour::backdrop {
+  background: transparent;
+}
+
+.tour__hole {
+  position: fixed;
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 200vmax rgb(8 6 8 / 72%);
+  outline: 2px solid var(--gold);
+  outline-offset: 0;
+  pointer-events: none;
+  transition: left 0.3s var(--ease), top 0.3s var(--ease), width 0.3s var(--ease), height 0.3s var(--ease);
+}
+
+/* No part to point at (welcome, or hidden on this screen): dim everything. */
+.tour__hole--none {
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  outline: none;
+}
+
+.tour__card {
+  position: fixed;
+  width: min(360px, calc(100vw - 32px));
+  padding: 20px 20px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+  transition: left 0.3s var(--ease), top 0.3s var(--ease);
+}
+
+.tour__count {
+  margin: 0;
+  color: var(--gold-ink);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.tour__title {
+  margin-top: 4px;
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.tour__body {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+.tour__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.tour__skip {
+  margin-right: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour__hole,
+  .tour__card {
+    transition: none;
+  }
+}
+
+/* The Daily / Weekly / Monthly switch and the arrows, as one part for the tour. */
+.period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* "Take the tour": at the bottom of the sidebar and of the phone menu. */
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--side-line);
+}
+
+.nav__tour {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer__footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--side-line);
+}
+
+@media (max-width: 860px) {
+  .sidebar > .sidebar__footer {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .period-controls {
+    width: 100%;
+  }
+}

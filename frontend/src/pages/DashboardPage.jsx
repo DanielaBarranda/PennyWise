@@ -54,16 +54,18 @@ export default function DashboardPage({ period, start, onStartChange }) {
         subtitle={`Here’s your financial overview for ${periodLabel(period, start)}.`}
         controls={
           <>
-            <PeriodSwitch />
-            <PeriodPicker period={period} start={start} onChange={onStartChange} />
+            <div className="period-controls" data-tour="period">
+              <PeriodSwitch />
+              <PeriodPicker period={period} start={start} onChange={onStartChange} />
+            </div>
           </>
         }
       >
-        <button type="button" className="button button--secondary" onClick={() => setBudgetOpen(true)} disabled={!current}>
+        <button type="button" className="button button--secondary" onClick={() => setBudgetOpen(true)} disabled={!current} data-tour="budget">
           <Icon name="pencil" />
           {hasBudget ? 'Edit budget' : 'Set budget'}
         </button>
-        <button type="button" className="button button--primary" onClick={() => setExpenseOpen(true)}>
+        <button type="button" className="button button--primary" onClick={() => setExpenseOpen(true)} data-tour="add-expense">
           <Icon name="plus" />
           Add expense
         </button>

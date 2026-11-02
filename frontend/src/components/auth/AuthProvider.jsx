@@ -113,6 +113,13 @@ export default function AuthProvider({ children }) {
     return me
   }, [])
 
+  // The app tour was finished or skipped; it then stops opening by itself.
+  const setTourCompleted = useCallback(async (completed) => {
+    const me = await api.updateTour(completed)
+    setUser(me)
+    return me
+  }, [])
+
   const uploadAvatar = useCallback(async (blob) => {
     const me = await api.uploadAvatar(blob)
     setUser(me)
@@ -157,11 +164,11 @@ export default function AuthProvider({ children }) {
     () => ({
       user, status, notice, clearNotice: () => setNotice(null), retrySession: checkSession,
       login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
-      register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount,
+      register, logout, updateProfile, updatePreferences, setTourCompleted, uploadAvatar, removeAvatar, changePassword, deleteAccount,
       enableTwoFactor, disableTwoFactor, newRecoveryCodes,
     }),
     [user, status, notice, checkSession, login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
-      register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount,
+      register, logout, updateProfile, updatePreferences, setTourCompleted, uploadAvatar, removeAvatar, changePassword, deleteAccount,
       enableTwoFactor, disableTwoFactor, newRecoveryCodes],
   )
 

@@ -258,6 +258,16 @@ public class AuthController(
         return UserResponse.From(user);
     }
 
+    // The app tour: marked done when finished or skipped; "Take the tour" resets it.
+    [HttpPut("tour")]
+    public async Task<ActionResult<UserResponse>> UpdateTour(TourRequest request)
+    {
+        var user = await CurrentUserAsync();
+        user.TourCompletedAt = request.Completed!.Value ? clock.UtcNow : null;
+        await db.SaveChangesAsync();
+        return UserResponse.From(user);
+    }
+
     // The signed-in user's own photo only; there is no way to ask for someone else's.
     // Served with nosniff and a locked-down CSP so the bytes can only ever be an image.
     [HttpGet("avatar")]
