@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import FormField from '../components/common/FormField.jsx'
 import Avatar from '../components/common/Avatar.jsx'
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx'
+import InstallApp from '../components/common/InstallApp.jsx'
 import Modal from '../components/common/Modal.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
@@ -54,6 +55,13 @@ export default function ProfilePage() {
               <h2 id="preferences-heading">Preferences</h2>
             </div>
             <AllowancePreference />
+          </section>
+
+          <section className="card" aria-labelledby="app-heading">
+            <div className="card__header">
+              <h2 id="app-heading">PennyWise app</h2>
+            </div>
+            <InstallApp />
           </section>
 
           <section className="card profile__danger" aria-labelledby="delete-heading">

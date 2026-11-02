@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import Icon from '../common/Icon.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
+import { promptInstall, usePwa } from '../../pwa/pwa.js'
 import Avatar from '../common/Avatar.jsx'
 
 // The round avatar button in the top bar. It opens a small menu with the
@@ -16,6 +17,7 @@ export default function AccountMenu() {
   const menuId = useId()
   const buttonId = useId()
 
+  const { canInstall } = usePwa()
   const items = () => [...(rootRef.current?.querySelectorAll('[role="menuitem"]') ?? [])]
 
   useEffect(() => {
@@ -96,6 +98,20 @@ export default function AccountMenu() {
               <Icon name="user" size={18} />
               Profile
             </a>
+            {canInstall && (
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu__item"
+                onClick={() => {
+                  close({ refocus: false })
+                  promptInstall()
+                }}
+              >
+                <Icon name="download" size={18} />
+                Install app
+              </button>
+            )}
             <button type="button" role="menuitem" className="account-menu__item account-menu__item--danger" onClick={handleLogout} disabled={busy}>
               <Icon name="logout" size={18} />
               {busy ? 'Logging out…' : 'Log out'}

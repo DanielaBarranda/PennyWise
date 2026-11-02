@@ -1,5 +1,6 @@
 import Icon from '../common/Icon.jsx'
 import ThemeToggle from '../layout/ThemeToggle.jsx'
+import PwaNotice from '../common/PwaNotice.jsx'
 
 const POINTS = [
   { icon: 'receipt', text: 'See where every peso goes, month by month' },
@@ -31,6 +32,7 @@ export default function AuthLayout({ theme, onToggleTheme, children }) {
       </aside>
 
       <main id="main" className="auth__main" tabIndex={-1}>
+        <PwaNotice />
         <div className="auth__toolbar">
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>

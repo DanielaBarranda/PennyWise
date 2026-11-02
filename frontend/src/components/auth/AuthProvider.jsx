@@ -9,17 +9,33 @@ export default function AuthProvider({ children }) {
   const [status, setStatus] = useState('loading')
   const [notice, setNotice] = useState(null)
 
+  // No answer at all (status 0) means no connection, which is not the same as
+  // being signed out: the app shows an offline screen and checks again later.
+  const checkSession = useCallback(
+    () =>
+      api.me().then(
+        (me) => {
+          setUser(me)
+          setStatus('ready')
+        },
+        (error) => {
+          if (error.status === 0) return setStatus('offline')
+          setUser(null) // e.g. the server is up but answered with an error
+          setStatus('ready')
+        },
+      ),
+    [],
+  )
+
   useEffect(() => {
-    let cancelled = false
-    api
-      .me()
-      .then((me) => !cancelled && setUser(me))
-      .catch(() => !cancelled && setUser(null)) // 401 = not signed in; network errors show the login page too
-      .finally(() => !cancelled && setStatus('ready'))
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    checkSession()
+  }, [checkSession])
+
+  useEffect(() => {
+    if (status !== 'offline') return
+    window.addEventListener('online', checkSession)
+    return () => window.removeEventListener('online', checkSession)
+  }, [status, checkSession])
 
   useEffect(() => {
     setSessionEndedHandler(() => {
@@ -98,8 +114,8 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount }),
-    [user, status, notice, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount],
+    () => ({ user, status, notice, clearNotice: () => setNotice(null), retrySession: checkSession, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount }),
+    [user, status, notice, checkSession, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

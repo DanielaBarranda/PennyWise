@@ -13,6 +13,8 @@ import InsightsPage from './pages/InsightsPage.jsx'
 import ReportsPage from './pages/ReportsPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
+import OfflineScreen from './components/common/OfflineScreen.jsx'
+import PwaNotice from './components/common/PwaNotice.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useHashRoute } from './hooks/useHashRoute.js'
 import { useSidebarCollapsed } from './hooks/useSidebarCollapsed.js'
@@ -46,7 +48,7 @@ export default function App() {
 // Signed out: only the login and register pages. Signed in: the app, and the
 // login/register pages send you to the dashboard instead.
 function Routes({ theme, onToggleTheme }) {
-  const { user, status } = useAuth()
+  const { user, status, retrySession } = useAuth()
   const route = useHashRoute()
   const onAuthPage = AUTH_ROUTES.includes(route)
 
@@ -64,6 +66,8 @@ function Routes({ theme, onToggleTheme }) {
       </div>
     )
   }
+
+  if (status === 'offline') return <OfflineScreen onRetry={retrySession} />
 
   if (!user) {
     return (
@@ -97,6 +101,7 @@ function Workspace({ route, theme, onToggleTheme }) {
       <div className="content">
         <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={onToggleTheme} />
         <main id="main" className="main" tabIndex={-1}>
+          <PwaNotice />
           <Page month={month} onMonthChange={setMonth} />
         </main>
       </div>

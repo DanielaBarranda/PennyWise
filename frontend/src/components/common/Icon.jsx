@@ -23,6 +23,7 @@ const PATHS = {
   piggy: 'M5 11a7 6 0 0 1 12.6-3.5L20 7v4l-1.5.8A7 7 0 0 1 16 16v3h-2.5v-2h-4v2H7v-3.2A6 6 0 0 1 5 11zM15 10.5h.01M9.5 7.5h3',
   spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   print: 'M7 9V3h10v6M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z',
   archive: 'M4 7h16v3H4zM5 10v9h14v-9M10 13.5h4',

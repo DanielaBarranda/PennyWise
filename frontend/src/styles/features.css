@@ -908,3 +908,121 @@
   gap: 24px;
   min-width: 0;
 }
+
+/* ================= Installed app (PWA) ================= */
+/* Notices at the top of the page: offline, or a new version is ready. */
+.pwa-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+
+.pwa-notice svg {
+  flex-shrink: 0;
+}
+
+.pwa-notice--offline {
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.pwa-notice--update {
+  border-color: var(--selected-line);
+  background: var(--selected-bg);
+}
+
+.pwa-notice--update .button {
+  margin-left: auto;
+}
+
+.auth__main > .pwa-notice {
+  width: min(100%, 440px);
+}
+
+/* Opened without a connection before the account could be checked. */
+.offline-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 100dvh;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.offline-screen img {
+  border-radius: 22px;
+}
+
+.offline-screen h1 {
+  font-size: 1.6rem;
+}
+
+.offline-screen p {
+  max-width: 42ch;
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+/* With viewport-fit=cover the installed app reaches under notches, rounded
+   corners and the home bar; these paddings keep content clear of them. In a
+   normal browser tab every env() value is 0, so nothing changes there. */
+.main {
+  padding-right: max(clamp(16px, 4vw, 52px), env(safe-area-inset-right));
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+.auth__main {
+  padding-top: calc(32px + env(safe-area-inset-top));
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+}
+
+.toast-stack {
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.drawer {
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+
+@media (min-width: 861px) {
+  .sidebar {
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .topbar {
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+}
+
+@media (max-width: 860px) {
+  .sidebar {
+    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .main {
+    padding-left: max(clamp(16px, 4vw, 52px), env(safe-area-inset-left));
+  }
+}
+
+/* Taps should feel like an app: no grey flash (focus styles still show). */
+@media (display-mode: standalone) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
