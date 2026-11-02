@@ -14,7 +14,8 @@ namespace PennyWise.Api.Tests;
 // Starts the real API in memory against its own temporary SQLite file, so tests
 // exercise the actual controllers, validation, sign-in, services and database,
 // but never touch your development data.
-public sealed class PennyWiseApiFactory(string databasePath, IDictionary<string, string>? settings = null, TimeProvider? time = null)
+public sealed class PennyWiseApiFactory(string databasePath, IDictionary<string, string>? settings = null, TimeProvider? time = null,
+    Action<IServiceCollection>? services = null)
     : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -27,6 +28,7 @@ public sealed class PennyWiseApiFactory(string databasePath, IDictionary<string,
             builder.ConfigureTestServices(services =>
                 services.AddSingleton(sp => new AppClock(sp.GetRequiredService<IConfiguration>(), time)));
         }
+        if (services is not null) builder.ConfigureTestServices(services);
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:PennyWise", $"Data Source={databasePath}");
         // Tests sign in many times a minute; the limit itself is tested separately.
@@ -52,9 +54,9 @@ public abstract class ApiTestBase : IAsyncLifetime, IDisposable
     protected PennyWiseApiFactory Factory { get; set; }
     protected HttpClient Client { get; set; } = null!;
 
-    protected ApiTestBase(IDictionary<string, string>? settings = null, TimeProvider? time = null)
+    protected ApiTestBase(IDictionary<string, string>? settings = null, TimeProvider? time = null, Action<IServiceCollection>? services = null)
     {
-        Factory = new PennyWiseApiFactory(DatabasePath, settings, time);
+        Factory = new PennyWiseApiFactory(DatabasePath, settings, time, services);
     }
 
     public virtual async Task InitializeAsync()

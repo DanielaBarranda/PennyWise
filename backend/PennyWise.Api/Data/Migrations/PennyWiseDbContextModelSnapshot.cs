@@ -312,6 +312,13 @@ namespace PennyWise.Api.Data.Migrations
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LastTotpStep")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("LockoutEndsAt")
                         .HasColumnType("TEXT");
 
@@ -329,12 +336,30 @@ namespace PennyWise.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RecoveryCodeHashes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SecurityStamp")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("TwoFactorEnabledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TwoFactorPendingSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TwoFactorSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique();
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique();

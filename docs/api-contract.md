@@ -40,7 +40,9 @@ Errors use ASP.NET Core's standard **ProblemDetails** format:
 ## Accounts and sign-in
 
 Every endpoint below requires a signed-in user, except `POST /api/auth/register`,
-`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` and `GET /api/health`.
+`POST /api/auth/login`, `POST /api/auth/login/two-factor`, `GET /api/auth/options`,
+`POST /api/auth/google`, `POST /api/auth/google/link`, `POST /api/auth/logout`,
+`GET /api/auth/me` and `GET /api/health`.
 
 - **Session:** signing in sets the cookie `pennywise_session` (HttpOnly, SameSite=Strict,
   Secure in production, 7 days, renewed while in use). The browser sends it automatically;
@@ -53,7 +55,11 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | Method | Route | Body | Success |
 |---|---|---|---|
 | POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `User`, signed in |
-| POST | `/api/auth/login` | `{ email, password }` | 200 `User`, signed in |
+| POST | `/api/auth/login` | `{ email, password }` | 200 `User`, signed in; or 200 `SignInStep` (see below) |
+| POST | `/api/auth/login/two-factor` | `{ ticket, code }` (6-digit app code or a recovery code) | 200 `User`, signed in; 400 wrong code; 401 ticket expired |
+| GET | `/api/auth/options` | | 200 `{ googleClientId }` (`null` when Google sign-in is not set up) |
+| POST | `/api/auth/google` | `{ credential }` (the ID token from Google's button) | 200 `User`, or 200 `SignInStep`; 401 if the token is not valid; 404 when Google sign-in is off |
+| POST | `/api/auth/google/link` | `{ ticket, password }` | 200 `User` (Google is now connected), or 200 `SignInStep` for the code |
 | POST | `/api/auth/logout` | | 204, cookie removed |
 | GET | `/api/auth/me` | | 200 `User`, or 204 when nobody is signed in |
 | PUT | `/api/auth/profile` | `{ name }` | 200 `User` (the email cannot be changed) |
@@ -62,10 +68,38 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | PUT | `/api/auth/avatar` | the image bytes (`Content-Type: image/…`) | 200 User |
 | DELETE | `/api/auth/avatar` | | 200 User |
 | POST | `/api/auth/change-password` | `{ currentPassword, newPassword, confirmPassword }` | 204; this browser stays signed in, every other device is signed out |
-| POST | `/api/auth/delete-account` | `{ password }` | 204, signed out. Deletes the account and all of its data; 400 if the password is wrong |
+| POST | `/api/auth/delete-account` | `{ password }`, or `{ googleCredential }` for an account without a password | 204, signed out. Deletes the account and all of its data; 400 if the password is wrong |
+| POST | `/api/auth/two-factor/setup` | | 200 `{ key, uri }`: the authenticator secret (Base32) and its `otpauth://` link for the QR code. Not active yet |
+| POST | `/api/auth/two-factor/enable` | `{ code }` | 200 `{ recoveryCodes }` (10, shown once); every other device is signed out |
+| POST | `/api/auth/two-factor/disable` | `{ code }` (app code or recovery code) | 200 `User` |
+| POST | `/api/auth/two-factor/recovery-codes` | `{ code }` | 200 `{ recoveryCodes }`; the old ones stop working |
 
-User is `{ id, name, email, memberSince, budgetPeriod, avatarVersion }`. `avatarVersion` is
-`null` when there is no profile photo and changes whenever the photo does.
+User is `{ id, name, email, memberSince, budgetPeriod, avatarVersion, hasPassword, googleConnected,
+twoFactorEnabled, recoveryCodesLeft }`. `avatarVersion` is `null` when there is no profile photo
+and changes whenever the photo does.
+
+**Sign-in steps.** When signing in needs one more step, the API answers with
+`SignInStep` `{ next, ticket, email }` instead of the user, and sets no cookie:
+- `next: "twoFactor"`: two-step verification is on. Send the ticket and a code to
+  `/api/auth/login/two-factor`. This applies to Google sign-in too.
+- `next: "linkGoogle"`: the Google account's email already has a PennyWise password. Send the
+  ticket and that password to `/api/auth/google/link` once; after that Google signs straight in.
+  (Without this, anyone who made a PennyWise account with someone else's email first could
+  take over their data later.)
+
+Tickets are encrypted, last 5 minutes and stop working if the password changes. Wrong passwords
+and wrong codes count towards the same lockout (5 tries, then 15 minutes); a right password does
+not reset the count while a code is still to come.
+
+**Two-step verification** uses standard time-based codes (RFC 6238: 6 digits, 30 seconds, SHA-1),
+so any authenticator app works. The secret is encrypted with ASP.NET Data Protection; recovery
+codes are stored only as SHA-256 hashes. Each app code and each recovery code works once.
+
+**Google sign-in** checks the ID token's RS256 signature against Google's published keys, the
+issuer, the audience (PennyWise's client ID, setting `PennyWise:GoogleClientId`), the expiry and
+`email_verified`. The account is matched by Google's permanent ID (`sub`), not by email. EC2 #2
+has no internet access, so it downloads Google's keys through Nginx on EC2 #1
+(`PennyWise:GoogleCertsUrl`, `/internal/google-certs`, allowed only from EC2 #2).
 
 Deleting an account removes the user and, through cascading foreign keys, every budget,
 category limit, expense, savings goal and transaction, bill and payment, and the photo. Other

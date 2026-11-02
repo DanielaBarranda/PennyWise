@@ -6,8 +6,10 @@ import InstallApp from '../components/common/InstallApp.jsx'
 import Modal from '../components/common/Modal.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
+import GoogleButton from '../components/auth/GoogleButton.jsx'
 import PasswordField from '../components/auth/PasswordField.jsx'
 import PasswordRules from '../components/auth/PasswordRules.jsx'
+import TwoFactorSettings from '../components/auth/TwoFactorSettings.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 import { PASSWORD_RULES } from '../utils/authValidation.js'
@@ -19,7 +21,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" subtitle="Your account details, preferences and password." />
+      <PageHeader title="Profile" subtitle="Your account details, preferences and sign-in security." />
       <div className="profile">
         <div className="profile__column">
           <section className="card" aria-labelledby="account-heading">
@@ -41,13 +43,22 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <section className="card" aria-labelledby="password-heading">
+          <section className="card" aria-labelledby="security-heading">
             <div className="card__header">
-              <h2 id="password-heading">Change password</h2>
+              <h2 id="security-heading">Sign-in and security</h2>
             </div>
-            <p className="profile__hint">For your security, other devices will be logged out after you change it.</p>
-            <PasswordForm />
+            <TwoFactorSettings />
           </section>
+
+          {user.hasPassword && (
+            <section className="card" aria-labelledby="password-heading">
+              <div className="card__header">
+                <h2 id="password-heading">Change password</h2>
+              </div>
+              <p className="profile__hint">For your security, other devices will be logged out after you change it.</p>
+              <PasswordForm />
+            </section>
+          )}
         </div>
         <div className="profile__column">
           <section className="card" aria-labelledby="preferences-heading">
@@ -150,8 +161,9 @@ function PhotoControls() {
   )
 }
 
-// Permanently deletes the account after the password is entered again and the
-// consequences are acknowledged.
+// Permanently deletes the account after the password is entered again (or, for
+// an account without a password, Google confirms it) and the consequences are
+// acknowledged.
 function DeleteAccount() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -181,19 +193,24 @@ function DeleteAccountForm({ onCancel, onBusyChange }) {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    if (!password) return setError('Enter your password to confirm.')
+  async function remove(proof) {
     setError(null)
     setBusy(true)
     onBusyChange(true)
     try {
-      await deleteAccount(password) // signs out and shows the login page
+      await deleteAccount(proof) // signs out and shows the login page
     } catch (err) {
       setError(err.fieldErrors?.password ?? err.message)
       setBusy(false)
       onBusyChange(false)
     }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    if (!user.hasPassword) return // confirmed with the Google button instead
+    if (!password) return setError('Enter your password to confirm.')
+    remove({ password })
   }
 
   return (
@@ -203,27 +220,43 @@ function DeleteAccountForm({ onCancel, onBusyChange }) {
         <li>You’re signed out on every device.</li>
         <li>You can sign up again with {user.email}, but you’ll start with an empty account.</li>
       </ul>
-      <PasswordField
-        label="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        error={error}
-        autoComplete="current-password"
-        autoFocus
-      />
+      {user.hasPassword && (
+        <PasswordField
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={error}
+          autoComplete="current-password"
+          autoFocus
+        />
+      )}
       <label className="check">
         <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
         <span>
           <span className="check__label">I understand this can’t be undone</span>
         </span>
       </label>
+      {!user.hasPassword && (
+        <div className="delete-google">
+          <p className="profile__hint">Your account has no password, so confirm with the Google account you sign in with.</p>
+          {understood ? (
+            <GoogleButton text="continue_with" disabled={busy} onCredential={(googleCredential) => remove({ googleCredential })} />
+          ) : (
+            <p className="profile__hint">Tick the box above first.</p>
+          )}
+          {error && <p className="field__error" role="alert">{error}</p>}
+          {busy && <p className="profile__hint" role="status">Deleting…</p>}
+        </div>
+      )}
       <div className="modal__actions">
         <button type="button" className="button button--ghost" onClick={onCancel} disabled={busy}>
           Cancel
         </button>
-        <button type="submit" className="button button--danger" disabled={!understood || busy}>
-          {busy ? 'Deleting…' : 'Delete my account'}
-        </button>
+        {user.hasPassword && (
+          <button type="submit" className="button button--danger" disabled={!understood || busy}>
+            {busy ? 'Deleting…' : 'Delete my account'}
+          </button>
+        )}
       </div>
     </form>
   )

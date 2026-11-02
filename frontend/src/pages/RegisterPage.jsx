@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import FormField from '../components/common/FormField.jsx'
 import Icon from '../components/common/Icon.jsx'
+import GoogleButton from '../components/auth/GoogleButton.jsx'
 import PasswordField from '../components/auth/PasswordField.jsx'
 import PasswordRules from '../components/auth/PasswordRules.jsx'
 import { useAuth } from '../hooks/useAuth.js'
@@ -8,7 +9,7 @@ import { useToast } from '../hooks/useToast.js'
 import { validateRegistration } from '../utils/authValidation.js'
 
 export default function RegisterPage() {
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
   const toast = useToast()
   const formRef = useRef(null)
   const headingRef = useRef(null)
@@ -51,6 +52,21 @@ export default function RegisterPage() {
     }
   }
 
+  // Google makes the account (or finds the existing one). If one more step is
+  // needed, the login page shows it.
+  async function handleGoogle(credential) {
+    setFormError(null)
+    setBusy(true)
+    try {
+      const me = await loginWithGoogle(credential)
+      if (me) toast.success(`Welcome, ${me.name}.`)
+      else window.location.replace('#/login')
+    } catch (error) {
+      setBusy(false)
+      setFormError(error.message)
+    }
+  }
+
   const confirmMismatch = form.confirmPassword && form.confirmPassword !== form.password
 
   return (
@@ -67,6 +83,8 @@ export default function RegisterPage() {
             {formError}
           </p>
         )}
+
+        <GoogleButton onCredential={handleGoogle} text="signup_with" divider disabled={busy} />
 
         <FormField label="Name" error={errors.name}>
           {(props) => <input {...props} type="text" autoComplete="name" maxLength={80} value={form.name} onChange={update('name')} />}

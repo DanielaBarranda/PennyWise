@@ -49,6 +49,10 @@ builder.Services.AddScoped<AllowanceService>();
 builder.Services.AddScoped<InsightService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddSingleton<TwoFactorService>();
+builder.Services.AddHttpClient(nameof(HttpGoogleKeySource), client => client.Timeout = TimeSpan.FromSeconds(5));
+builder.Services.AddSingleton<IGoogleKeySource, HttpGoogleKeySource>();
+builder.Services.AddSingleton<GoogleTokenValidator>();
 
 // ---------- Sign-in cookie ----------
 // The keys that sign the cookie are kept on disk in production, so signing in

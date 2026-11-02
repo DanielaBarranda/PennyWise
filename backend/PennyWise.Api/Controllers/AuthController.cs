@@ -14,8 +14,9 @@ using PennyWise.Api.Services;
 
 namespace PennyWise.Api.Controllers;
 
-// Sign-up, sign-in and sign-out. A successful sign-in sets an HttpOnly cookie that
-// the browser sends automatically; JavaScript can never read it.
+// Sign-up, sign-in (password or Google, then the authenticator code when two-step
+// verification is on) and sign-out. A finished sign-in sets an HttpOnly cookie
+// that the browser sends automatically; JavaScript can never read it.
 [ApiController]
 [Route("api/auth")]
 public class AuthController(
@@ -23,11 +24,17 @@ public class AuthController(
     IPasswordHasher<User> hasher,
     LegacyDataClaimer legacyData,
     AvatarService avatars,
+    TwoFactorService twoFactor,
+    GoogleTokenValidator google,
     AppClock clock,
     ILogger<AuthController> logger) : ControllerBase
 {
-    public const string StampClaim = "pennywise:stamp";
+    public const string StampClaim = SessionCookie.StampClaim;
     private const string WrongCredentials = "Email or password is incorrect.";
+    private const string NoPassword = "This account signs in with Google. Use Continue with Google.";
+    private const string WrongCode = "That code is not correct. Check your authenticator app and try again.";
+    private const string LoginTicket = "login";
+    private const string LinkTicket = "link-google";
 
     // Hash of a random password, checked when an email is unknown so a wrong
     // email takes as long as a wrong password (no timing hint that it exists).
@@ -88,38 +95,125 @@ public class AuthController(
             return Unauthorized(Failure(WrongCredentials));
         }
 
-        var now = clock.UtcNow;
-        if (user.LockoutEndsAt > now)
+        if (LockedOut(user) is { } locked) return locked;
+        if (!user.HasPassword)
         {
-            var minutes = (int)Math.Ceiling((user.LockoutEndsAt.Value - now).TotalMinutes);
-            return StatusCode(StatusCodes.Status429TooManyRequests,
-                Failure($"Too many wrong passwords. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}."));
+            hasher.VerifyHashedPassword(new User(), DummyHash, request.Password!);
+            return Unauthorized(Failure(NoPassword));
         }
 
-        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!);
-        if (result == PasswordVerificationResult.Failed)
+        if (!await CheckPasswordAsync(user, request.Password!)) return Unauthorized(Failure(WrongCredentials));
+        return await FinishSignInAsync(user);
+    }
+
+    // Step two when two-step verification is on: the ticket from step one plus
+    // a code from the authenticator app (or a recovery code). Wrong codes count
+    // towards the same lockout as wrong passwords.
+    [HttpPost("login/two-factor")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<ActionResult<UserResponse>> LoginTwoFactor(TwoFactorLoginRequest request)
+    {
+        var user = await UserFromTicketAsync(request.Ticket, LoginTicket);
+        if (user is null) return Unauthorized(Failure("Your sign-in has expired. Log in again."));
+        if (LockedOut(user) is { } locked) return locked;
+
+        if (!twoFactor.Verify(user, request.Code!))
         {
-            user.FailedLoginCount++;
-            if (user.FailedLoginCount >= AuthRules.MaxFailedLogins)
-            {
-                user.FailedLoginCount = 0;
-                user.LockoutEndsAt = now + AuthRules.LockoutDuration;
-            }
-            await db.SaveChangesAsync();
-            return Unauthorized(Failure(WrongCredentials));
+            await RecordFailureAsync(user);
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["Code"] = [WrongCode] }));
         }
 
         user.FailedLoginCount = 0;
         user.LockoutEndsAt = null;
-        if (result == PasswordVerificationResult.SuccessRehashNeeded)
-        {
-            user.PasswordHash = hasher.HashPassword(user, request.Password!);
-        }
         await db.SaveChangesAsync();
-
         await legacyData.ClaimIfOwnerAsync(user);
         await SignInAsync(user);
         return UserResponse.From(user);
+    }
+
+    // The Google client ID for the sign-in button, or null when Google sign-in
+    // is not set up (the button is then not shown).
+    [HttpGet("options")]
+    [AllowAnonymous]
+    public AuthOptionsResponse Options() => new(google.ClientId);
+
+    // Continue with Google. Signs in the account connected to this Google
+    // account; otherwise creates one, unless the email already has a PennyWise
+    // password, in which case the password is asked for once (linkGoogle).
+    [HttpPost("google")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<ActionResult<UserResponse>> Google(GoogleSignInRequest request)
+    {
+        var identity = await ValidateGoogleAsync(request.Credential!);
+        if (identity.Result is { } failed) return failed;
+        var person = identity.Value!;
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.GoogleSubject == person.Subject);
+        if (user is null)
+        {
+            var normalized = AuthRules.Normalize(person.Email);
+            user = await db.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalized);
+            if (user is not null)
+            {
+                if (user.GoogleSubject is not null)
+                {
+                    return Conflict(Failure("This email is connected to a different Google account. Log in with that one or with your password."));
+                }
+                return Ok(new SignInStep("linkGoogle", twoFactor.CreateTicket(user, LinkTicket, person.Subject), user.Email));
+            }
+
+            user = new User
+            {
+                Name = person.Name.Length > 80 ? person.Name[..80] : person.Name,
+                Email = person.Email,
+                NormalizedEmail = normalized,
+                GoogleSubject = person.Subject,
+                SecurityStamp = Guid.NewGuid().ToString("N"),
+                CreatedAt = clock.UtcNow,
+            };
+            db.Users.Add(user);
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE") == true)
+            {
+                return Conflict(Failure("This account was just created. Try Continue with Google again."));
+            }
+            logger.LogInformation("Account {UserId} was created with Google sign-in.", user.Id);
+        }
+
+        if (LockedOut(user) is { } locked) return locked;
+        return await FinishSignInAsync(user);
+    }
+
+    // Connects Google to an existing password account after the password is entered.
+    [HttpPost("google/link")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<ActionResult<UserResponse>> LinkGoogle(GoogleLinkRequest request)
+    {
+        var ticket = twoFactor.ReadTicket(request.Ticket, LinkTicket);
+        var user = await UserFromTicketAsync(request.Ticket, LinkTicket);
+        if (user is null || ticket is null) return Unauthorized(Failure("Your sign-in has expired. Try Continue with Google again."));
+        if (LockedOut(user) is { } locked) return locked;
+
+        if (!await CheckPasswordAsync(user, request.Password!))
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["Password"] = ["Password is incorrect."] }));
+        }
+
+        var subject = ticket.Value.Extra;
+        if (await db.Users.AnyAsync(u => u.GoogleSubject == subject && u.Id != user.Id))
+        {
+            return Conflict(Failure("This Google account is already connected to another PennyWise account."));
+        }
+        user.GoogleSubject = subject;
+        await db.SaveChangesAsync();
+        logger.LogInformation("Account {UserId} connected Google sign-in.", user.Id);
+        return await FinishSignInAsync(user);
     }
 
     [HttpPost("logout")]
@@ -194,6 +288,7 @@ public class AuthController(
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
         var user = await CurrentUserAsync();
+        if (!user.HasPassword) return BadRequest(Failure("Your account signs in with Google, so it has no password to change."));
         if (hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword!) == PasswordVerificationResult.Failed)
         {
             return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
@@ -227,12 +322,27 @@ public class AuthController(
     public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request)
     {
         var user = await CurrentUserAsync();
-        if (hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!) == PasswordVerificationResult.Failed)
+        if (user.HasPassword)
         {
-            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            if (string.IsNullOrEmpty(request.Password)
+                || hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             {
-                ["Password"] = ["Password is incorrect."],
-            }));
+                return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+                {
+                    ["Password"] = [string.IsNullOrEmpty(request.Password) ? "Enter your password to confirm." : "Password is incorrect."],
+                }));
+            }
+        }
+        else
+        {
+            // No password: Google must confirm it is still the same person.
+            if (string.IsNullOrEmpty(request.GoogleCredential)) return BadRequest(Failure("Confirm with Google to delete your account."));
+            var identity = await ValidateGoogleAsync(request.GoogleCredential);
+            if (identity.Result is { } failed) return failed;
+            if (identity.Value!.Subject != user.GoogleSubject)
+            {
+                return BadRequest(Failure("That Google account is not the one connected to PennyWise."));
+            }
         }
 
         db.Users.Remove(user);
@@ -250,19 +360,85 @@ public class AuthController(
         return await db.Users.FirstAsync(u => u.Id == id);
     }
 
-    private Task SignInAsync(User user)
-    {
-        var identity = new ClaimsIdentity(
-        [
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Name),
-            new Claim(StampClaim, user.SecurityStamp),
-        ], CookieAuthenticationDefaults.AuthenticationScheme);
+    private Task SignInAsync(User user) => SessionCookie.SignInAsync(HttpContext, user);
 
-        return HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(identity),
-            new AuthenticationProperties { IsPersistent = true });
+    // The password (or Google) step is done. With two-step verification on,
+    // the browser gets a ticket for the code step instead of a session.
+    private async Task<ActionResult<UserResponse>> FinishSignInAsync(User user)
+    {
+        if (user.TwoFactorEnabled)
+        {
+            await db.SaveChangesAsync();
+            return Ok(new SignInStep("twoFactor", twoFactor.CreateTicket(user, LoginTicket)));
+        }
+
+        user.FailedLoginCount = 0;
+        user.LockoutEndsAt = null;
+        await db.SaveChangesAsync();
+        await legacyData.ClaimIfOwnerAsync(user);
+        await SignInAsync(user);
+        return UserResponse.From(user);
+    }
+
+    // Checks the password, counting wrong ones towards the lockout. A right one
+    // does not reset the count while a code is still to come, so someone who
+    // knows the password cannot keep resetting it between guesses at the code.
+    private async Task<bool> CheckPasswordAsync(User user, string password)
+    {
+        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        if (result == PasswordVerificationResult.Failed)
+        {
+            await RecordFailureAsync(user);
+            return false;
+        }
+        if (result == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.PasswordHash = hasher.HashPassword(user, password);
+        }
+        return true;
+    }
+
+    private async Task RecordFailureAsync(User user)
+    {
+        user.FailedLoginCount++;
+        if (user.FailedLoginCount >= AuthRules.MaxFailedLogins)
+        {
+            user.FailedLoginCount = 0;
+            user.LockoutEndsAt = clock.UtcNow + AuthRules.LockoutDuration;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private ObjectResult? LockedOut(User user)
+    {
+        var now = clock.UtcNow;
+        if (!(user.LockoutEndsAt > now)) return null;
+        var minutes = (int)Math.Ceiling((user.LockoutEndsAt.Value - now).TotalMinutes);
+        return StatusCode(StatusCodes.Status429TooManyRequests,
+            Failure($"Too many wrong attempts. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}."));
+    }
+
+    // The user a sign-in ticket was made for, if it is unexpired and the
+    // password has not changed since.
+    private async Task<User?> UserFromTicketAsync(string? ticket, string purpose)
+    {
+        if (twoFactor.ReadTicket(ticket, purpose) is not { } t) return null;
+        return await db.Users.FirstOrDefaultAsync(u => u.Id == t.UserId && u.SecurityStamp == t.Stamp);
+    }
+
+    private async Task<ActionResult<GoogleIdentity>> ValidateGoogleAsync(string credential)
+    {
+        if (google.ClientId is null) return NotFound(Failure("Google sign-in is not set up."));
+        try
+        {
+            var identity = await google.ValidateAsync(credential, HttpContext.RequestAborted);
+            return identity is null ? Unauthorized(Failure("Google sign-in did not work. Please try again.")) : identity;
+        }
+        catch (GoogleUnavailableException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                Failure("Google sign-in is not available right now. Try again later, or log in with your password."));
+        }
     }
 
     private static ProblemDetails Failure(string title) => new() { Title = title };

@@ -92,7 +92,17 @@ function normalizeFieldErrors(errors) {
 export const api = {
   me: () => request('/auth/me'),
   register: (form) => request('/auth/register', { method: 'POST', body: form }),
+  // Sign-in answers with the user, or with { next, ticket } when another step is
+  // needed: 'twoFactor' (the authenticator code) or 'linkGoogle' (the password once).
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
+  loginTwoFactor: (ticket, code) => request('/auth/login/two-factor', { method: 'POST', body: { ticket, code } }),
+  authOptions: () => request('/auth/options'),
+  googleSignIn: (credential) => request('/auth/google', { method: 'POST', body: { credential } }),
+  linkGoogle: (ticket, password) => request('/auth/google/link', { method: 'POST', body: { ticket, password } }),
+  twoFactorSetup: () => request('/auth/two-factor/setup', { method: 'POST' }),
+  twoFactorEnable: (code) => request('/auth/two-factor/enable', { method: 'POST', body: { code } }),
+  twoFactorDisable: (code) => request('/auth/two-factor/disable', { method: 'POST', body: { code } }),
+  newRecoveryCodes: (code) => request('/auth/two-factor/recovery-codes', { method: 'POST', body: { code } }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   updateProfile: (profile) => request('/auth/profile', { method: 'PUT', body: profile }),
   changePassword: (form) => request('/auth/change-password', { method: 'POST', body: form }),

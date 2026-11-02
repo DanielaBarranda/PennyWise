@@ -16,7 +16,11 @@ public class AuthApiTests : ApiTestBase
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Contains("\"name\":\"Ana Cruz\"", body);
-        Assert.DoesNotContain("password", body, StringComparison.OrdinalIgnoreCase);
+        // Only the "hasPassword" flag; never the hash (ASP.NET Core hashes start "AQAAAA").
+        Assert.DoesNotContain("passwordHash", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("AQAAAA", body);
+        Assert.DoesNotContain("secret", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("recoveryCodeHashes", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("stamp", body, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
     }

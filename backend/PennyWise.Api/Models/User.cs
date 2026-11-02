@@ -2,6 +2,7 @@ namespace PennyWise.Api.Models;
 
 // A PennyWise account. The password is never stored: only a salted hash made by
 // ASP.NET Core's PasswordHasher (PBKDF2), which is never sent to the browser.
+// Accounts created with Google sign-in have no password (an empty hash).
 public class User
 {
     public int Id { get; set; }
@@ -14,6 +15,29 @@ public class User
     public string NormalizedEmail { get; set; } = string.Empty;
 
     public string PasswordHash { get; set; } = string.Empty;
+
+    public bool HasPassword => PasswordHash.Length > 0;
+
+    // Google's permanent ID for the person ("sub" in its sign-in token), once
+    // Google sign-in is connected. Emails can change; this never does.
+    public string? GoogleSubject { get; set; }
+
+    // Two-step verification with an authenticator app. The secret is encrypted
+    // with ASP.NET Data Protection; recovery codes are stored only as hashes.
+    public string? TwoFactorSecret { get; set; }
+
+    // A secret shown during setup that is not active until a code from it is entered.
+    public string? TwoFactorPendingSecret { get; set; }
+
+    public DateTime? TwoFactorEnabledAt { get; set; }
+
+    public bool TwoFactorEnabled => TwoFactorEnabledAt is not null;
+
+    // SHA-256 hashes of the unused recovery codes, separated by ";".
+    public string? RecoveryCodeHashes { get; set; }
+
+    // The last 30-second time step a code was accepted for, so a code cannot be used twice.
+    public long? LastTotpStep { get; set; }
 
     // Changes whenever the password changes; sign-in cookies carry a copy, so an
     // old cookie stops working once the stamp no longer matches.

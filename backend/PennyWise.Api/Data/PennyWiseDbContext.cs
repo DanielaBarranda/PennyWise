@@ -26,6 +26,11 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.SecurityStamp).HasMaxLength(64).IsRequired();
             entity.HasIndex(u => u.NormalizedEmail).IsUnique();
+            entity.Property(u => u.GoogleSubject).HasMaxLength(255);
+            entity.HasIndex(u => u.GoogleSubject).IsUnique();
+            entity.Property(u => u.TwoFactorSecret).HasMaxLength(500);
+            entity.Property(u => u.TwoFactorPendingSecret).HasMaxLength(500);
+            entity.Property(u => u.RecoveryCodeHashes).HasMaxLength(1000);
             entity.Property(u => u.BudgetPeriod).HasColumnName("AllowancePeriod").HasConversion<string>().HasMaxLength(10)
                 .HasDefaultValue(BudgetPeriod.Monthly).HasSentinel((BudgetPeriod)(-1));
         });

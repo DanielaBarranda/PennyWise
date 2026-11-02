@@ -8,6 +8,8 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading')
   const [notice, setNotice] = useState(null)
+  // A sign-in waiting for one more step: { next: 'twoFactor' | 'linkGoogle', ticket, email }.
+  const [pendingStep, setPendingStep] = useState(null)
 
   // No answer at all (status 0) means no connection, which is not the same as
   // being signed out: the app shows an offline screen and checks again later.
@@ -47,11 +49,48 @@ export default function AuthProvider({ children }) {
     return () => setSessionEndedHandler(() => {})
   }, [])
 
-  const login = useCallback(async (credentials) => {
-    const me = await api.login(credentials)
+  // Every way of signing in ends here: either the user (signed in) or the next step.
+  const finish = useCallback((result) => {
     setNotice(null)
+    if (result?.next) {
+      setPendingStep(result)
+      return null
+    }
+    setPendingStep(null)
+    setUser(result)
+    return result
+  }, [])
+
+  const login = useCallback(async (credentials) => finish(await api.login(credentials)), [finish])
+  const loginWithGoogle = useCallback(async (credential) => finish(await api.googleSignIn(credential)), [finish])
+  const verifyTwoFactor = useCallback(
+    async (code) => finish(await api.loginTwoFactor(pendingStep?.ticket, code)),
+    [finish, pendingStep],
+  )
+  const linkGoogle = useCallback(
+    async (password) => finish(await api.linkGoogle(pendingStep?.ticket, password)),
+    [finish, pendingStep],
+  )
+  const cancelStep = useCallback(() => setPendingStep(null), [])
+
+  // Turning two-step verification on signs out other devices and returns the
+  // recovery codes; the user is reloaded so Profile shows it as on.
+  const enableTwoFactor = useCallback(async (code) => {
+    const { recoveryCodes } = await api.twoFactorEnable(code)
+    setUser(await api.me())
+    return recoveryCodes
+  }, [])
+
+  const disableTwoFactor = useCallback(async (code) => {
+    const me = await api.twoFactorDisable(code)
     setUser(me)
     return me
+  }, [])
+
+  const newRecoveryCodes = useCallback(async (code) => {
+    const { recoveryCodes } = await api.newRecoveryCodes(code)
+    setUser(await api.me())
+    return recoveryCodes
   }, [])
 
   const register = useCallback(async (form) => {
@@ -90,9 +129,10 @@ export default function AuthProvider({ children }) {
   const changePassword = useCallback((form) => api.changePassword(form), [])
 
   // Permanent. Also forgets what this browser remembered for the account.
+  // `proof` is { password } or, for accounts without one, { googleCredential }.
   const deleteAccount = useCallback(
-    async (password) => {
-      await api.deleteAccount({ password })
+    async (proof) => {
+      await api.deleteAccount(proof)
       try {
         localStorage.removeItem(`pennywise.dismissedInsights.${user?.id}`)
       } catch {
@@ -114,8 +154,15 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, notice, clearNotice: () => setNotice(null), retrySession: checkSession, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount }),
-    [user, status, notice, checkSession, login, register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount],
+    () => ({
+      user, status, notice, clearNotice: () => setNotice(null), retrySession: checkSession,
+      login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
+      register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount,
+      enableTwoFactor, disableTwoFactor, newRecoveryCodes,
+    }),
+    [user, status, notice, checkSession, login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
+      register, logout, updateProfile, updatePreferences, uploadAvatar, removeAvatar, changePassword, deleteAccount,
+      enableTwoFactor, disableTwoFactor, newRecoveryCodes],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1001,3 +1001,183 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* ================= Sign-in: Google and two-step verification ================= */
+/* Google draws its own button (an iframe) at a fixed width; this centers it. */
+.google-signin__button {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.google-signin--disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.google-signin__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 2px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.google-signin__divider::before,
+.google-signin__divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+
+/* The 6-digit code: big, evenly spaced digits that are easy to check. */
+.code-input {
+  font-size: 1.375rem;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth__switch--tight {
+  margin-top: 8px;
+}
+
+.signin-methods {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signin-methods li {
+  display: grid;
+  grid-template-columns: 18px 80px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  font-size: var(--fs-sm);
+}
+
+.signin-methods__name {
+  font-weight: 600;
+}
+
+.signin-methods__status {
+  color: var(--muted);
+}
+
+.two-factor {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.two-factor__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.two-factor__head h3 {
+  font-size: 1rem;
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.badge--on {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge--off {
+  background: var(--surface-sunk);
+  color: var(--muted);
+}
+
+.profile__actions--start {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 1.3em;
+  font-size: var(--fs-sm);
+}
+
+.setup-steps li + li {
+  margin-top: 4px;
+}
+
+.setup-qr {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.qr-code {
+  flex: none;
+  border-radius: var(--r-md);
+}
+
+.setup-qr__key {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.setup-qr__key code,
+.recovery-codes code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: var(--text);
+}
+
+.setup-qr__key code {
+  display: block;
+  margin-top: 6px;
+  word-break: break-all;
+  font-size: 0.95rem;
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 14px 16px 14px 2.2em;
+  border-radius: var(--r-md);
+  background: var(--surface-sunk);
+  font-size: 0.95rem;
+}
+
+.form--nested {
+  padding: 0;
+}
+
+.delete-google {
+  display: grid;
+  gap: 10px;
+}
+
+.delete-google .profile__hint {
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .setup-qr {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .recovery-codes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
