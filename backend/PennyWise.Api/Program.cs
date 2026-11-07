@@ -117,9 +117,12 @@ builder.Services.AddRateLimiter(options =>
 
 // Behind Nginx, the visitor's real IP and https scheme arrive in X-Forwarded-*
 // headers. They are only trusted from the frontend instance (appsettings.Production.json).
+// ForwardLimit is how many proxies to look back through: 1 behind Nginx on AWS,
+// 2 on Azure (Vercel, then Azure's own front end; see deploy/azure-vercel/README.md).
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = settings.GetValue("ForwardLimit", 1);
     options.KnownProxies.Clear();
     options.KnownIPNetworks.Clear();
     foreach (var proxy in (settings["TrustedProxies"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
