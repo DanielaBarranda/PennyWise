@@ -69,19 +69,20 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
             }
         }
 
-        // 2. Overall budget
+        // 2. Overall budget (spending plus money moved into savings in the period)
         if (budget is not null && budget.Amount > 0)
         {
-            var percent = spent / budget.Amount * 100;
-            if (spent > budget.Amount)
+            var used = spent + await SavingsService.SetAsideAsync(db, userId, first, last);
+            var percent = used / budget.Amount * 100;
+            if (used > budget.Amount)
             {
                 insights.Add(new($"budget-over-{month}", "Critical", "Fact", "Over budget",
-                    $"You've spent {Peso(spent - budget.Amount)} more than your {budgetName} of {Peso(budget.Amount)}.", "dashboard", false));
+                    $"You've used {Peso(used - budget.Amount)} more than your {budgetName} of {Peso(budget.Amount)}.", "dashboard", false));
             }
             else if (percent >= 80)
             {
                 insights.Add(new($"budget-warn-{month}", "Warning", "Fact", "Budget almost used",
-                    $"You've used {Pct(percent)} of your {budgetName}{DaysLeftText(window, daysLeft)}. {Peso(budget.Amount - spent)} is left.",
+                    $"You've used {Pct(percent)} of your {budgetName}{DaysLeftText(window, daysLeft)}. {Peso(budget.Amount - used)} is left.",
                     "dashboard", true));
             }
         }

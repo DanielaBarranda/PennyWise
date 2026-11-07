@@ -226,6 +226,13 @@
   font-size: var(--fs-xs);
 }
 
+.stat__saved {
+  display: block;
+  margin-top: 2px;
+  color: var(--gold-ink);
+  font-weight: 600;
+}
+
 .stat--alert-danger {
   background: var(--danger-bg);
   border-color: var(--danger-line);

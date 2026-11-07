@@ -9,7 +9,8 @@ namespace PennyWise.Api.Services;
 
 // Savings goals for the signed-in user. Contributions and withdrawals are kept
 // separate from expenses: setting money aside is not spending, so it never
-// changes budgets, dashboard totals or allowances.
+// changes spending totals or category limits. It does come out of the budget for
+// the day, week or month it is dated in (see SetAsideAsync).
 public class SavingsService(PennyWiseDbContext db, AppClock clock, CurrentUser currentUser)
 {
     public async Task<List<SavingsGoalResponse>> ListAsync(bool includeArchived)
@@ -125,6 +126,19 @@ public class SavingsService(PennyWiseDbContext db, AppClock clock, CurrentUser c
     }
 
     public static decimal Saved(SavingsGoal goal) => SavedUntil(goal, DateOnly.MaxValue);
+
+    // Money a user moved into savings between two dates: deposits minus withdrawals,
+    // never below 0. It comes out of the budget for those dates, like spending,
+    // but is not spending. Withdrawing money saved earlier does not add to a budget.
+    public static async Task<decimal> SetAsideAsync(PennyWiseDbContext db, int userId, DateOnly first, DateOnly last)
+    {
+        var transactions = await db.SavingsTransactions.AsNoTracking()
+            .Where(t => t.Date >= first && t.Date <= last && db.SavingsGoals.Any(g => g.Id == t.GoalId && g.UserId == userId))
+            .Select(t => new { t.Type, t.Amount })
+            .ToListAsync();
+        var net = transactions.Sum(t => t.Type == SavingsTransactionType.Contribution ? t.Amount : -t.Amount);
+        return Math.Max(net, 0);
+    }
 
     // Saved amount counting only transactions dated on or before the given day
     // (used by monthly reports for "saved at the end of the month").

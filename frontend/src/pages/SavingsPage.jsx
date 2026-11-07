@@ -41,8 +41,9 @@ export default function SavingsPage() {
 
       <p className="page-note">
         <Icon name="info" size={16} />
-        PennyWise records the money you set aside for each goal. It doesn’t move money between bank accounts, and saving
-        doesn’t count as spending in your budget.
+        PennyWise records the money you set aside for each goal. It doesn’t move money between bank accounts. Money you
+        add comes out of your budget for that day, week or month (withdrawing it in the same period puts it back), but it
+        isn’t counted as spending.
       </p>
 
       <label className="toggle">
@@ -317,7 +318,7 @@ function MoneyForm({ goal, type, onCancel, onSaved }) {
         updated.status === 'Completed' && deposit
           ? `You reached your ${goal.name} goal!`
           : deposit
-            ? `Added ${formatPeso(Number(form.amount))} to ${goal.name}.`
+            ? `Added ${formatPeso(Number(form.amount))} to ${goal.name}. It comes out of your budget for that date.`
             : `Withdrew ${formatPeso(Number(form.amount))} from ${goal.name}.`,
       )
       onSaved()
@@ -331,7 +332,7 @@ function MoneyForm({ goal, type, onCancel, onSaved }) {
     <form className="form" onSubmit={handleSubmit} noValidate>
       {errors.form && <p className="form__error" role="alert">{errors.form}</p>}
       <div className="form__row">
-        <FormField label="Amount" error={errors.amount}>
+        <FormField label="Amount" error={errors.amount} hint={deposit ? 'Comes out of your budget for this date' : 'Goes back to your budget if saved in the same period'}>
           {(props) => (
             <div className="input-affix input-affix--large">
               <span className="input-affix__prefix" aria-hidden="true">₱</span>

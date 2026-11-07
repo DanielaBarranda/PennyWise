@@ -3,6 +3,7 @@ import Modal from '../common/Modal.jsx'
 import FormField from '../common/FormField.jsx'
 import Icon from '../common/Icon.jsx'
 import CategoryPicker from './CategoryPicker.jsx'
+import CoverShortfallModal from './CoverShortfallModal.jsx'
 import { api } from '../../services/api.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useToast } from '../../hooks/useToast.js'
@@ -10,25 +11,40 @@ import { budgetName, periodQuery, periodStart } from '../../utils/budgetPeriod.j
 import { MAX_DESCRIPTION_LENGTH } from '../../utils/constants.js'
 import { defaultDateForMonth } from '../../utils/dates.js'
 import { formatPeso } from '../../utils/format.js'
+import { shortfallFor } from '../../utils/shortfall.js'
 import { validateExpense } from '../../utils/validation.js'
 
 // `expense` is null when adding, or the expense being edited.
+// After a save that takes a category over its limit, a second dialog offers to
+// cover the difference from another category (CoverShortfallModal). It lives here,
+// not in the form, so it can open after the expense dialog has closed.
 export default function ExpenseFormModal({ open, expense, month, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
+  const [cover, setCover] = useState(null)
 
   return (
-    <Modal
-      open={open}
-      title={expense ? 'Edit expense' : 'Add expense'}
-      description={expense ? 'Changes update your totals right away.' : 'Record something you spent.'}
-      onClose={saving ? () => {} : onClose}
-    >
-      <ExpenseForm expense={expense} month={month} onCancel={onClose} onSaved={onSaved} onSavingChange={setSaving} />
-    </Modal>
+    <>
+      <Modal
+        open={open}
+        title={expense ? 'Edit expense' : 'Add expense'}
+        description={expense ? 'Changes update your totals right away.' : 'Record something you spent.'}
+        onClose={saving ? () => {} : onClose}
+      >
+        <ExpenseForm expense={expense} month={month} onCancel={onClose} onSaved={onSaved} onSavingChange={setSaving} onShortfall={setCover} />
+      </Modal>
+      <CoverShortfallModal
+        cover={cover}
+        onClose={() => setCover(null)}
+        onMoved={() => {
+          setCover(null)
+          onSaved() // the page reloads its totals
+        }}
+      />
+    </>
   )
 }
 
-function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
+function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange, onShortfall }) {
   const { user } = useAuth()
   const toast = useToast()
   const formRef = useRef(null)
@@ -74,7 +90,7 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
       toast.success(expense ? 'Expense updated.' : 'Expense added.')
       setBusy(false)
       onSaved(saved)
-      warnIfOverBudget(toast, user.budgetPeriod ?? 'Monthly', payload.expenseDate, payload.category)
+      warnIfOverBudget(toast, user.budgetPeriod ?? 'Monthly', payload.expenseDate, payload.category, onShortfall)
     } catch (error) {
       setBusy(false)
       setFormError(error.message)
@@ -153,8 +169,9 @@ function ExpenseForm({ expense, month, onCancel, onSaved, onSavingChange }) {
 }
 
 // After a save, check the budget for the expense's own day, week or month (the
-// account's budget period) and warn if it, or the category's limit, is near or passed.
-async function warnIfOverBudget(toast, period, date, category) {
+// account's budget period) and warn if it is near or passed. A category over its
+// limit opens the "where should the extra come from?" dialog instead of a toast.
+async function warnIfOverBudget(toast, period, date, category, onShortfall) {
   const start = periodStart(period, date)
   let summary
   try {
@@ -165,14 +182,12 @@ async function warnIfOverBudget(toast, period, date, category) {
   if (!summary.budget) return
 
   const label = budgetName(period, start)
-  const categoryInfo = summary.categories?.find((c) => c.category === category)
+  const shortfall = shortfallFor(summary, category)
+  if (shortfall) return onShortfall({ shortfall, budget: summary.budget, label })
 
   if (summary.status === 'Exceeded') {
     toast.warning(`You are over your ${label} by ${formatPeso(-summary.remaining)}.`)
   } else if (summary.status === 'Warning') {
     toast.warning(`You have used ${Math.round(summary.percentSpent)}% of your ${label}.`)
-  }
-  if (categoryInfo?.status === 'Exceeded') {
-    toast.warning(`${category} spending is over its ${formatPeso(categoryInfo.limit)} limit in your ${label}.`)
   }
 }

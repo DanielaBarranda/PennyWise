@@ -25,7 +25,8 @@ public record ReportSavings(decimal Contributions, decimal Withdrawals, decimal 
 
 public record ReportGoal(string Name, decimal TargetAmount, decimal SavedAtMonthEnd, decimal PercentAtMonthEnd, decimal ContributedThisMonth, decimal WithdrawnThisMonth);
 
-public record ReportPeriodBudget(string Period, DateOnly Start, DateOnly End, decimal Amount, decimal Spent);
+// Left = Amount - Spent - Saved (money moved into savings within the budget's dates).
+public record ReportPeriodBudget(string Period, DateOnly Start, DateOnly End, decimal Amount, decimal Spent, decimal Saved, decimal Left);
 
 public record ReportBills(int Due, int Paid, int Unpaid, decimal PaidAmount, decimal UnpaidAmount, List<ReportBill> Items);
 

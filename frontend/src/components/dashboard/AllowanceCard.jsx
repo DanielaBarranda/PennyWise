@@ -70,6 +70,7 @@ function AllowanceBody({ allowance: a, unit, daily }) {
       <dl className="allowance__math" aria-label="How this is worked out">
         <div><dt>Budget</dt><dd>{formatPeso(a.budget)}</dd></div>
         <div><dt>Spent</dt><dd>− {formatPeso(a.spent)}</dd></div>
+        {a.saved > 0 && <div><dt>Moved to savings this {unit}</dt><dd>− {formatPeso(a.saved)}</dd></div>}
         <div><dt>Unpaid bills due this {unit}</dt><dd>− {formatPeso(a.reservedForBills)}</dd></div>
         <div className="allowance__total"><dt>Left to spend</dt><dd>{formatPeso(Math.max(a.available, 0))}</dd></div>
       </dl>

@@ -101,7 +101,8 @@ public class ReportApiTests : FeatureTestBase
 
         var r = await GetReportAsync();
 
-        Assert.Equal((4000m, 2, 40.0m, 6000m), (r.TotalSpent, r.ExpenseCount, r.BudgetUsedPercent!.Value, r.Remaining!.Value)); // 2500 + 1500 bill
+        // Spent 2500 + 1500 bill; the 2500 net moved into savings also comes out of the budget.
+        Assert.Equal((4000m, 2, 65.0m, 3500m), (r.TotalSpent, r.ExpenseCount, r.BudgetUsedPercent!.Value, r.Remaining!.Value));
         Assert.Equal((2000m, 100.0m), (r.PreviousTotalSpent, r.ChangeFromPreviousPercent!.Value));
         Assert.Equal((1, 1500m, true), (r.Bills.Paid, r.Bills.PaidAmount, r.Bills.Items.Single().RecordedAsExpense));
         Assert.Equal((3000m, 500m, 2500m), (r.Savings.Contributions, r.Savings.Withdrawals, r.Savings.Net));

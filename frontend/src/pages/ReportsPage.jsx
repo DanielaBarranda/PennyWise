@@ -101,6 +101,7 @@ export default function ReportsPage({ month, onMonthChange }) {
                       <th scope="col">Period</th>
                       <th scope="col" className="num">Budget</th>
                       <th scope="col" className="num">Spent</th>
+                      <th scope="col" className="num">To savings</th>
                       <th scope="col" className="num">Left</th>
                     </tr>
                   </thead>
@@ -113,15 +114,16 @@ export default function ReportsPage({ month, onMonthChange }) {
                         </td>
                         <td className="num">{formatPeso(b.amount)}</td>
                         <td className="num">{formatPeso(b.spent)}</td>
-                        <td className={`num ${b.amount - b.spent < 0 ? 'amount--out' : ''}`}>
-                          {b.amount - b.spent < 0 ? `${formatPeso(b.spent - b.amount)} over` : formatPeso(b.amount - b.spent)}
+                        <td className="num">{formatPeso(b.saved)}</td>
+                        <td className={`num ${b.left < 0 ? 'amount--out' : ''}`}>
+                          {b.left < 0 ? `${formatPeso(-b.left)} over` : formatPeso(b.left)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="card__footnote">Each one counts the spending inside its own dates. They are not added up into a monthly budget.</p>
+              <p className="card__footnote">Each one counts the spending and the money moved into savings inside its own dates. They are not added up into a monthly budget.</p>
             </section>
           )}
 

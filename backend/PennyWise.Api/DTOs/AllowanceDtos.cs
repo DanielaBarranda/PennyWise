@@ -10,8 +10,9 @@ public record AllowanceResponse(
     string Status,            // Available | OverBudget | Ended | NoBudget
     decimal? Budget,
     decimal Spent,
+    decimal Saved,            // moved into savings goals within the period (at least 0)
     decimal ReservedForBills, // unpaid bills due within the period
-    decimal? Available,       // budget - spent - reserved; negative when over budget
+    decimal? Available,       // budget - spent - saved - reserved; negative when over budget
     int DaysLeft,             // in the period, today included
     decimal? Daily,           // what is left, divided by the days left
     decimal? Total);          // everything left in the period

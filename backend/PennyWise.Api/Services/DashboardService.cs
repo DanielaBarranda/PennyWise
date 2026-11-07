@@ -34,6 +34,9 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             .ToListAsync();
 
         var totalSpent = expenses.Sum(e => e.Amount);
+        // Money moved into savings in the period also comes out of its budget.
+        var saved = await SavingsService.SetAsideAsync(db, userId, first, last);
+        var used = totalSpent + saved;
 
         var categories = Enum.GetValues<Category>().Select(category =>
         {
@@ -57,9 +60,10 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             Month: window.Month,
             Budget: budget is null ? null : BudgetResponse.From(budget),
             TotalSpent: totalSpent,
-            Remaining: budget is null ? null : budget.Amount - totalSpent,
-            PercentSpent: budget is null ? null : Math.Round(totalSpent / budget.Amount * 100, 2),
-            Status: budget is null ? "NoBudget" : StatusFor(totalSpent, budget.Amount),
+            Saved: saved,
+            Remaining: budget is null ? null : budget.Amount - used,
+            PercentSpent: budget is null ? null : Math.Round(used / budget.Amount * 100, 2),
+            Status: budget is null ? "NoBudget" : StatusFor(used, budget.Amount),
             ExpenseCount: expenses.Count,
             Categories: categories,
             RecentExpenses: recent);

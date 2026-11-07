@@ -25,7 +25,8 @@ function StatCard({ icon, tone, label, value, children }) {
 }
 
 // Four cards: budget, spent, remaining, and what needs attention. Every number
-// comes straight from GET /api/dashboard/summary.
+// comes straight from GET /api/dashboard/summary. Money moved into savings is not
+// spending, but it comes out of the remaining balance (and the % used).
 export default function SummaryCards({ summary, period, onSetBudget, onShowCategories }) {
   const budget = summary.budget
   const unit = PERIOD_UNIT[period]
@@ -43,7 +44,8 @@ export default function SummaryCards({ summary, period, onSetBudget, onShowCateg
       </StatCard>
 
       <StatCard icon="spent" tone="gold" label="Total spent" value={formatPeso(summary.totalSpent)}>
-        {budget ? `${formatPercent(percent)} of budget, ${expenseCount}` : expenseCount}
+        {budget ? `${formatPercent(percent)} of budget used, ${expenseCount}` : expenseCount}
+        {summary.saved > 0 && <span className="stat__saved">+ {formatPeso(summary.saved)} moved to savings</span>}
       </StatCard>
 
       <StatCard

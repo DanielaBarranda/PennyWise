@@ -152,7 +152,8 @@ Everything in it is for that one period: its own budget and the expenses dated i
   "period": "Monthly", "start": "2026-10-01", "end": "2026-10-31",
   "month": "2026-10",
   "budget": { "...Budget object..." },
-  "totalSpent": 6720.50,
+  "totalSpent": 6520.50,
+  "saved": 200.00,
   "remaining": 1279.50,
   "percentSpent": 84.01,
   "status": "Warning",
@@ -166,7 +167,8 @@ Everything in it is for that one period: its own budget and the expenses dated i
 ```
 
 - `budget` is `null` when the period has no budget. In that case `remaining` and `percentSpent` are `null`, and `status` is `"NoBudget"`.
-- `status` is `"OnTrack"` below 80%, `"Warning"` from 80% up to 100%, and `"Exceeded"` above 100%.
+- `saved` is the money moved into savings goals inside the period: deposits minus withdrawals, never below 0 (withdrawing money saved earlier does not add to a budget). It is not spending, so `totalSpent` and the categories leave it out, but it comes out of the budget: `remaining = budget − totalSpent − saved` and `percentSpent = (totalSpent + saved) / budget`.
+- `status` is `"OnTrack"` below 80%, `"Warning"` from 80% up to 100%, and `"Exceeded"` above 100%, of that same spent-plus-saved amount.
 - `categories` always has all six categories. Each one's `status` is `"NoLimit"`, `"OnTrack"`, `"Warning"` or `"Exceeded"`.
 
 ### Budgets
@@ -184,6 +186,8 @@ be the first day of the period: any day for Daily, a Monday for Weekly, the 1st 
 
 Validation: each category can appear at most once in `categoryLimits`, and all the limits together cannot add up to more than `amount`.
 
+When an expense takes a category over its limit, the app offers to cover the difference: it sends a `PUT` that raises that limit and lowers another category's (which keeps at least ₱1), or uses budget not given to any category. The budget's `amount` never changes.
+
 ### Expenses
 | Method | Route | Body | Success |
 |---|---|---|---|
@@ -197,7 +201,8 @@ Validation: `description` is required, is trimmed, and is at most 200 characters
 
 ### Savings goals
 A goal's saved amount is always worked out from its deposits and withdrawals; it is never
-stored or typed in. Saving does not count as spending.
+stored or typed in. Saving does not count as spending, but money moved into savings comes out
+of the budget for the day, week or month it is dated in (see `saved` on the dashboard summary).
 
 | Method | Route | Body | Success |
 |---|---|---|---|
@@ -240,12 +245,12 @@ the app only; no email or push notifications are sent.
 
 ```json
 { "period": "Weekly", "start": "2026-11-02", "end": "2026-11-08", "status": "Available",
-  "budget": 1000, "spent": 250, "reservedForBills": 0, "available": 750,
+  "budget": 1000, "spent": 250, "saved": 0, "reservedForBills": 0, "available": 750,
   "daysLeft": 7, "daily": 107.14, "total": 750 }
 ```
 
-`available = budget − spent in the period − unpaid bills due in the period` (overdue ones
-included). `daily` is what is left divided by the days left in the period (today included,
+`available = budget − spent in the period − moved into savings in the period − unpaid bills
+due in the period` (overdue ones included). `daily` is what is left divided by the days left in the period (today included,
 Manila time), rounded down to the centavo; `total` is everything left. Only that period's own
 budget is used. `status` is `Available`, `OverBudget`, `Ended` or `NoBudget`.
 
@@ -261,8 +266,10 @@ dismissed. Dismissals are remembered in the browser, per account.
 - `GET /api/reports/monthly.csv?month=YYYY-MM`: the same report as a CSV download (UTF-8).
 
 The report's budget is the month's own monthly budget. Weekly and daily budgets starting in the
-month are listed separately (`periodBudgets`: period, start, end, amount, and the spending inside
-their own dates); they are never added up into a monthly budget.
+month are listed separately (`periodBudgets`: period, start, end, amount, the spending and the
+money moved into savings inside their own dates, and `left = amount − spent − saved`); they are
+never added up into a monthly budget. `budgetUsedPercent` and `remaining` count spending plus the
+month's net savings deposits.
 
 Paid bills recorded as expenses are counted once, in spending. Income is not recorded in
 PennyWise, so the report shows no income or net cash flow.

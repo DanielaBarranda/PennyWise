@@ -88,16 +88,85 @@ public class SavingsApiTests : FeatureTestBase
     }
 
     [Fact]
-    public async Task Saving_money_does_not_count_as_spending()
+    public async Task Saving_money_comes_out_of_the_budget_but_is_not_spending()
     {
-        await CreateBudgetAsync("2026-10", 5000);
+        await CreateBudgetAsync("2026-10", 5000, ("Food", 1000));
         var goal = await CreateGoalAsync("Laptop", 30000);
         await AddSavingsAsync(goal.Id, "Contribution", 2000);
 
         var summary = await GetSummaryAsync("2026-10");
 
-        Assert.Equal(0m, summary.TotalSpent);
-        Assert.Equal(5000m, summary.Remaining);
+        Assert.Equal((0m, 2000m, 3000m, 40.00m), (summary.TotalSpent, summary.Saved, summary.Remaining!.Value, summary.PercentSpent!.Value));
+        Assert.All(summary.Categories, c => Assert.Equal(0m, c.Total)); // category limits only count spending
+    }
+
+    [Fact]
+    public async Task A_withdrawal_in_the_same_period_gives_the_money_back_to_the_budget()
+    {
+        await CreateBudgetAsync("2026-10", 5000);
+        var goal = await CreateGoalAsync("Laptop", 30000);
+        await AddSavingsAsync(goal.Id, "Contribution", 2000, "2026-10-05");
+        await AddSavingsAsync(goal.Id, "Withdrawal", 500, "2026-10-12");
+
+        var summary = await GetSummaryAsync("2026-10");
+
+        Assert.Equal((1500m, 3500m), (summary.Saved, summary.Remaining!.Value));
+    }
+
+    [Fact]
+    public async Task Withdrawing_money_saved_earlier_does_not_add_to_a_budget()
+    {
+        await CreateBudgetAsync("2026-10", 5000);
+        var goal = await CreateGoalAsync("Laptop", 30000);
+        await AddSavingsAsync(goal.Id, "Contribution", 2000, "2026-10-01");
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-19", amount = 1000 });
+        await AddSavingsAsync(goal.Id, "Withdrawal", 800, "2026-10-20");
+
+        var week = await Client.GetFromJsonAsync<DashboardSummaryResponse>("/api/dashboard/summary?period=Weekly&date=2026-10-20");
+
+        Assert.Equal((0m, 1000m), (week!.Saved, week.Remaining!.Value));
+    }
+
+    [Fact]
+    public async Task Savings_come_out_of_the_allowance_for_their_own_week_only()
+    {
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-19", amount = 1000 });
+        var goal = await CreateGoalAsync("Laptop", 30000);
+        await AddSavingsAsync(goal.Id, "Contribution", 300, "2026-10-16"); // last week
+        await AddSavingsAsync(goal.Id, "Contribution", 250, "2026-10-20"); // this week
+        await CreateExpenseAsync(100, "Food", "2026-10-20");
+
+        var a = await Client.GetFromJsonAsync<AllowanceResponse>("/api/allowance?period=Weekly&date=2026-10-20");
+
+        Assert.Equal((100m, 250m, 650m), (a!.Spent, a.Saved, a.Available!.Value));
+    }
+
+    [Fact]
+    public async Task Saving_past_the_budget_shows_the_over_budget_insight()
+    {
+        await CreateBudgetAsync("2026-10", 1000);
+        await CreateExpenseAsync(600, "Food", "2026-10-10");
+        var goal = await CreateGoalAsync("Laptop", 30000);
+        await AddSavingsAsync(goal.Id, "Contribution", 500);
+
+        var insights = await Client.GetFromJsonAsync<List<InsightResponse>>("/api/insights?month=2026-10");
+
+        var over = Assert.Single(insights!, i => i.Key == "budget-over-2026-10");
+        Assert.Contains("₱100.00 more than", over.Message);
+    }
+
+    [Fact]
+    public async Task The_report_counts_savings_in_each_weekly_budget()
+    {
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-19", amount = 1000 });
+        await CreateExpenseAsync(200, "Food", "2026-10-20");
+        var goal = await CreateGoalAsync("Laptop", 30000);
+        await AddSavingsAsync(goal.Id, "Contribution", 300, "2026-10-20");
+
+        var report = await Client.GetFromJsonAsync<MonthlyReportResponse>("/api/reports/monthly?month=2026-10");
+
+        var week = Assert.Single(report!.PeriodBudgets);
+        Assert.Equal((200m, 300m, 500m), (week.Spent, week.Saved, week.Left));
     }
 
     [Fact]

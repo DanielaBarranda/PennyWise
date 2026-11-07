@@ -59,6 +59,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         var monthTx = goals.SelectMany(g => g.Transactions).Where(t => t.Date >= first && t.Date <= last).ToList();
         var contributions = monthTx.Where(t => t.Type == SavingsTransactionType.Contribution).Sum(t => t.Amount);
         var withdrawals = monthTx.Where(t => t.Type == SavingsTransactionType.Withdrawal).Sum(t => t.Amount);
+        // Spending plus the money moved into savings this month is what the budget has used.
+        var used = totalSpent + Math.Max(contributions - withdrawals, 0);
         var reportGoals = goals
             .Where(g => DateOnly.FromDateTime(g.CreatedAt) <= last && (g.ArchivedAt is null || DateOnly.FromDateTime(g.ArchivedAt.Value) >= first))
             .Select(g =>
@@ -89,14 +91,16 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             var spentInWindow = (await db.Expenses.AsNoTracking()
                 .Where(e => e.UserId == userId && e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
                 .Select(e => e.Amount).ToListAsync()).Sum();
-            reportPeriodBudgets.Add(new ReportPeriodBudget(b.Period.ToString(), window.Start, window.End, b.Amount, spentInWindow));
+            var savedInWindow = await SavingsService.SetAsideAsync(db, userId, window.Start, window.End);
+            reportPeriodBudgets.Add(new ReportPeriodBudget(b.Period.ToString(), window.Start, window.End, b.Amount, spentInWindow,
+                savedInWindow, b.Amount - spentInWindow - savedInWindow));
         }
 
         var notes = new List<string>
         {
             "Income is not recorded in PennyWise, so this report shows no income or net cash flow.",
             "Bill payments recorded as expenses are already included in total spending; the bills section does not add them again.",
-            "Savings deposits are money set aside, not spending, so they are not included in total spending.",
+            "Savings deposits are money set aside, not spending, so they are not included in total spending. They do come out of the budget: budget used and remaining count spending plus the money moved into savings (deposits minus withdrawals).",
         };
         if (reportPeriodBudgets.Count > 0)
         {
@@ -109,8 +113,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             budget?.Amount,
             totalSpent,
             current.Count,
-            budget is { Amount: > 0 } ? Math.Round(totalSpent / budget.Amount * 100, 1) : null,
-            budget is null ? null : budget.Amount - totalSpent,
+            budget is { Amount: > 0 } ? Math.Round(used / budget.Amount * 100, 1) : null,
+            budget is null ? null : budget.Amount - used,
             previousTotal,
             previousTotal > 0 ? Math.Round((totalSpent - previousTotal) / previousTotal * 100, 1) : null,
             categories,
@@ -145,8 +149,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         Row();
         if (r.PeriodBudgets.Count > 0)
         {
-            Row("Weekly or daily budget", "Start", "End", "Budget", "Spent");
-            foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.Spent);
+            Row("Weekly or daily budget", "Start", "End", "Budget", "Spent", "Moved to savings", "Left");
+            foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.Spent, b.Saved, b.Left);
             Row();
         }
         Row("Savings", "Value");
