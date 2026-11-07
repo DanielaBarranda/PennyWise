@@ -6,7 +6,7 @@ instances): nothing here changes them, and penny-wise.app still points to AWS.
 
 | Part | Where | Address |
 |---|---|---|
-| Website (React) | Vercel, Hobby plan (free) | https://pennywise-one-opal.vercel.app |
+| Website (React) | Vercel, Hobby plan (free) | https://penny-wise-app.vercel.app |
 | API + SQLite database | Azure App Service, F1 Linux plan (free), East Asia | https://pennywise-api-ph.azurewebsites.net |
 
 Vercel forwards every `/api/*` request to Azure (`frontend/vercel.json`), so the browser
@@ -57,5 +57,5 @@ subscription requires multi-factor sign-in for changes; if the CLI says so, run 
 - F1: 60 CPU minutes a day and 1 GB of storage. The app sleeps when idle, so the first
   request after a while takes 10–20 seconds.
 - Vercel Hobby: personal, non-commercial use.
-- Google sign-in needs `https://pennywise-one-opal.vercel.app` in the OAuth client's
+- Google sign-in needs `https://penny-wise-app.vercel.app` in the OAuth client's
   "Authorized JavaScript origins" (Google Cloud Console → APIs & Services → Credentials).

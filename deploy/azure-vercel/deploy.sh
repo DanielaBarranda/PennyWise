@@ -15,7 +15,7 @@ TARGET="${1:-all}"
 AZ="${AZ:-az}"
 APP=pennywise-api-ph
 GROUP=pennywise-rg
-SITE=https://pennywise-one-opal.vercel.app
+SITE=https://penny-wise-app.vercel.app
 BUILD=build/azure
 
 step() { printf '\n==> %s\n' "$1"; }
