@@ -54,8 +54,8 @@ subscription requires multi-factor sign-in for changes; if the CLI says so, run 
 
 ## Limits of the free tiers
 
-- F1: 60 CPU minutes a day and 1 GB of storage. The app sleeps when idle, so the first
-  request after a while takes 10–20 seconds.
+- F1: 60 CPU minutes a day and 1 GB of storage. The app sleeps after about 20 idle
+  minutes, so the first request afterwards can take up to a minute; reload if it times out.
 - Vercel Hobby: personal, non-commercial use.
 - Google sign-in needs `https://penny-wise-app.vercel.app` in the OAuth client's
   "Authorized JavaScript origins" (Google Cloud Console → APIs & Services → Credentials).
