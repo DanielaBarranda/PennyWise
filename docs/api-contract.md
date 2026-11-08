@@ -42,6 +42,7 @@ Errors use ASP.NET Core's standard **ProblemDetails** format:
 Every endpoint below requires a signed-in user, except `POST /api/auth/register`,
 `POST /api/auth/login`, `POST /api/auth/login/two-factor`, `GET /api/auth/options`,
 `POST /api/auth/google`, `POST /api/auth/google/link`, `POST /api/auth/logout`,
+`POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `POST /api/auth/verify-email`,
 `GET /api/auth/me` and `GET /api/health`.
 
 - **Session:** signing in sets the cookie `pennywise_session` (HttpOnly, SameSite=Strict,
@@ -57,7 +58,11 @@ Every endpoint below requires a signed-in user, except `POST /api/auth/register`
 | POST | `/api/auth/register` | `{ name, email, password, confirmPassword }` | 201 `User`, signed in |
 | POST | `/api/auth/login` | `{ email, password }` | 200 `User`, signed in; or 200 `SignInStep` (see below) |
 | POST | `/api/auth/login/two-factor` | `{ ticket, code }` (6-digit app code or a recovery code) | 200 `User`, signed in; 400 wrong code; 401 ticket expired |
-| GET | `/api/auth/options` | | 200 `{ googleClientId }` (`null` when Google sign-in is not set up) |
+| GET | `/api/auth/options` | | 200 `{ googleClientId, emailEnabled }` (`googleClientId` is `null` when Google sign-in is not set up; `emailEnabled` is false when the server can't send email) |
+| POST | `/api/auth/forgot-password` | `{ email }` | 202 whether or not the email has an account (a reset link is emailed if it does); 503 when email isn't set up |
+| POST | `/api/auth/reset-password` | `{ token, password, confirmPassword }` | 204: new password set, every session signed out, email counted as confirmed; 400 when the link expired (1 hour) or was already used |
+| POST | `/api/auth/verify-email` | `{ token }` | 200 `User` with `emailVerified: true`; 400 when the link expired (3 days) or isn't valid |
+| POST | `/api/auth/resend-verification` | | 202, emails a new confirmation link; 409 if already confirmed; 503 when email isn't set up |
 | POST | `/api/auth/google` | `{ credential }` (the ID token from Google's button) | 200 `User`, or 200 `SignInStep`; 401 if the token is not valid; 404 when Google sign-in is off |
 | POST | `/api/auth/google/link` | `{ ticket, password }` | 200 `User` (Google is now connected), or 200 `SignInStep` for the code |
 | POST | `/api/auth/logout` | | 204, cookie removed |

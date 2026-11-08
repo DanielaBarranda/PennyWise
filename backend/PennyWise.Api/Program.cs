@@ -55,6 +55,21 @@ builder.Services.AddHttpClient(nameof(HttpGoogleKeySource), client => client.Tim
 builder.Services.AddSingleton<IGoogleKeySource, HttpGoogleKeySource>();
 builder.Services.AddSingleton<GoogleTokenValidator>();
 
+// ---------- Email (password reset, email confirmation) ----------
+// Off unless an SMTP host is configured; see Services/Email/EmailService.cs.
+var emailSettings = settings.GetSection("Email").Get<PennyWise.Api.Services.Email.EmailSettings>() ?? new();
+builder.Services.AddSingleton(emailSettings);
+if (!string.IsNullOrWhiteSpace(emailSettings.Host))
+    builder.Services.AddSingleton<PennyWise.Api.Services.Email.IEmailSender, PennyWise.Api.Services.Email.SmtpEmailSender>();
+else if (builder.Environment.IsDevelopment())
+    builder.Services.AddSingleton<PennyWise.Api.Services.Email.IEmailSender, PennyWise.Api.Services.Email.LogEmailSender>();
+else
+    builder.Services.AddSingleton<PennyWise.Api.Services.Email.IEmailSender, PennyWise.Api.Services.Email.DisabledEmailSender>();
+builder.Services.AddSingleton<PennyWise.Api.Services.Email.EmailOutbox>();
+builder.Services.AddHostedService<PennyWise.Api.Services.Email.EmailDispatcher>();
+builder.Services.AddSingleton<PennyWise.Api.Services.Email.EmailLinkTokens>();
+builder.Services.AddSingleton<PennyWise.Api.Services.Email.AccountEmails>();
+
 // ---------- Sign-in cookie ----------
 // The keys that sign the cookie are kept on disk in production, so signing in
 // survives API restarts and deployments (otherwise everyone would be signed out).

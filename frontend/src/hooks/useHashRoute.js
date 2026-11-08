@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 // A tiny router: "#/dashboard", "#/expenses", "#/profile", "#/login", "#/register". A few pages
 // do not justify a routing library, and hash URLs work behind Nginx without
 // extra rewrite rules. Which pages a visitor may see is decided in App.jsx.
-export const ROUTES = ['dashboard', 'expenses', 'savings', 'bills', 'insights', 'reports', 'profile', 'login', 'register']
+export const ROUTES = ['dashboard', 'expenses', 'savings', 'bills', 'insights', 'reports', 'profile', 'login', 'register',
+  'forgot-password', 'reset-password', 'verify-email']
 
 function readRoute() {
-  const route = window.location.hash.replace(/^#\/?/, '')
+  // "#/reset-password?token=…": the part after "?" belongs to the page, not the route.
+  const route = window.location.hash.replace(/^#\/?/, '').split('?')[0]
   return ROUTES.includes(route) ? route : 'dashboard'
 }
 

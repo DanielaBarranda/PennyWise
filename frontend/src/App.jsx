@@ -13,6 +13,8 @@ import InsightsPage from './pages/InsightsPage.jsx'
 import ReportsPage from './pages/ReportsPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
+import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/AccountEmailPages.jsx'
+import VerifyEmailBanner from './components/auth/VerifyEmailBanner.jsx'
 import OfflineScreen from './components/common/OfflineScreen.jsx'
 import PwaNotice from './components/common/PwaNotice.jsx'
 import { useAuth } from './hooks/useAuth.js'
@@ -25,6 +27,8 @@ import { periodStart } from './utils/budgetPeriod.js'
 import { currentMonth, todayIso } from './utils/dates.js'
 
 const AUTH_ROUTES = ['login', 'register']
+// Opened from email links (or "Forgot password?"): shown whether or not someone is signed in.
+const EMAIL_PAGES = { 'forgot-password': ForgotPasswordPage, 'reset-password': ResetPasswordPage, 'verify-email': VerifyEmailPage }
 
 export default function App() {
   const [theme, toggleTheme] = useTheme()
@@ -56,10 +60,10 @@ function Routes({ theme, onToggleTheme }) {
   const onAuthPage = AUTH_ROUTES.includes(route)
 
   useEffect(() => {
-    if (status !== 'ready') return
+    if (status !== 'ready' || EMAIL_PAGES[route]) return
     if (!user && !onAuthPage) window.location.replace('#/login')
     if (user && onAuthPage) window.location.replace('#/dashboard')
-  }, [user, status, onAuthPage])
+  }, [user, status, onAuthPage, route])
 
   if (status === 'loading') {
     return (
@@ -71,6 +75,15 @@ function Routes({ theme, onToggleTheme }) {
   }
 
   if (status === 'offline') return <OfflineScreen onRetry={retrySession} />
+
+  const EmailPage = EMAIL_PAGES[route]
+  if (EmailPage) {
+    return (
+      <AuthLayout theme={theme} onToggleTheme={onToggleTheme}>
+        <EmailPage />
+      </AuthLayout>
+    )
+  }
 
   if (!user) {
     return (
@@ -121,6 +134,7 @@ function Workspace({ route, theme, onToggleTheme }) {
         <Topbar collapsed={collapsed} onToggleSidebar={toggleSidebar} theme={theme} onToggleTheme={onToggleTheme} />
         <main id="main" className="main" tabIndex={-1}>
           <PwaNotice />
+          <VerifyEmailBanner />
           <Page
             month={month}
             onMonthChange={setMonth}

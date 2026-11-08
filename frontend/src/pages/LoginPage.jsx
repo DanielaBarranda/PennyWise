@@ -116,6 +116,9 @@ function PasswordStep() {
           error={errors.password}
           autoComplete="current-password"
         />
+        <p className="auth__forgot">
+          <a href="#/forgot-password">Forgot password?</a>
+        </p>
 
         <button type="submit" className="button button--primary button--block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}

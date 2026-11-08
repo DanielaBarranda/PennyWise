@@ -60,5 +60,9 @@ public class User
     // Kept on the account, so it does not come back on another device.
     public DateTime? TourCompletedAt { get; set; }
 
+    // When the user proved they own the email (by its confirmation link, a
+    // password reset link, or Google, which only gives verified emails).
+    public DateTime? EmailVerifiedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

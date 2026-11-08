@@ -365,6 +365,9 @@ namespace PennyWise.Api.Data.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("INTEGER");
 

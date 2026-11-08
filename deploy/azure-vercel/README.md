@@ -41,6 +41,25 @@ On Azure they live in persistent storage:
 
 Startup command: `dotnet PennyWise.Api.dll`.
 
+### Email (forgot password, email confirmation)
+
+Email is off until an SMTP service is set up; the app then says "Email isn't set up" instead of
+pretending to send. To turn it on, create an account with any SMTP provider (for example Brevo,
+Resend or Amazon SES), verify your sending domain there, and add these app settings in the Azure
+portal yourself (never commit them):
+
+| Setting | Example |
+|---|---|
+| `PennyWise__PublicUrl` | `https://penny-wise-app.vercel.app` (where links in emails point; already set) |
+| `PennyWise__Email__Host` | `smtp-relay.brevo.com` |
+| `PennyWise__Email__Port` | `587` |
+| `PennyWise__Email__Username` | your SMTP username |
+| `PennyWise__Email__Password` | your SMTP password or key (a secret) |
+| `PennyWise__Email__From` | `PennyWise <no-reply@penny-wise.app>` |
+
+On AWS, put the same values (with `PennyWise__PublicUrl=https://penny-wise.app`, already the
+default there) as `Environment=` lines in a systemd drop-in for `pennywise-api`, readable only by root.
+
 ## Deploying changes
 
 ```bash

@@ -93,6 +93,11 @@ export default function AuthProvider({ children }) {
     return recoveryCodes
   }, [])
 
+  // Reloads the signed-in user, e.g. after the email is confirmed from a link.
+  const refreshUser = useCallback(async () => {
+    setUser(await api.me())
+  }, [])
+
   const register = useCallback(async (form) => {
     const me = await api.register(form)
     setNotice(null)
@@ -165,11 +170,11 @@ export default function AuthProvider({ children }) {
       user, status, notice, clearNotice: () => setNotice(null), retrySession: checkSession,
       login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
       register, logout, updateProfile, updatePreferences, setTourCompleted, uploadAvatar, removeAvatar, changePassword, deleteAccount,
-      enableTwoFactor, disableTwoFactor, newRecoveryCodes,
+      enableTwoFactor, disableTwoFactor, newRecoveryCodes, refreshUser,
     }),
     [user, status, notice, checkSession, login, loginWithGoogle, pendingStep, verifyTwoFactor, linkGoogle, cancelStep,
       register, logout, updateProfile, updatePreferences, setTourCompleted, uploadAvatar, removeAvatar, changePassword, deleteAccount,
-      enableTwoFactor, disableTwoFactor, newRecoveryCodes],
+      enableTwoFactor, disableTwoFactor, newRecoveryCodes, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

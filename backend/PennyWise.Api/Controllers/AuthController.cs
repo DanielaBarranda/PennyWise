@@ -11,6 +11,7 @@ using PennyWise.Api.Data;
 using PennyWise.Api.DTOs;
 using PennyWise.Api.Models;
 using PennyWise.Api.Services;
+using PennyWise.Api.Services.Email;
 
 namespace PennyWise.Api.Controllers;
 
@@ -26,6 +27,8 @@ public class AuthController(
     AvatarService avatars,
     TwoFactorService twoFactor,
     GoogleTokenValidator google,
+    AccountEmails emails,
+    EmailLinkTokens emailTokens,
     AppClock clock,
     ILogger<AuthController> logger) : ControllerBase
 {
@@ -78,6 +81,7 @@ public class AuthController(
         }
 
         await legacyData.ClaimIfOwnerAsync(user);
+        emails.SendVerification(user);
         await SignInAsync(user);
         return CreatedAtAction(nameof(Me), UserResponse.From(user));
     }
@@ -136,7 +140,78 @@ public class AuthController(
     // is not set up (the button is then not shown).
     [HttpGet("options")]
     [AllowAnonymous]
-    public AuthOptionsResponse Options() => new(google.ClientId);
+    public AuthOptionsResponse Options() => new(google.ClientId, emails.IsEnabled);
+
+    // "Forgot password?": emails a reset link if the address has an account.
+    // The answer is the same either way, so nobody can use this to find out
+    // which emails are registered (the email itself is sent in the background).
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        if (!emails.IsEnabled) return EmailUnavailable();
+        var normalized = AuthRules.Normalize(request.Email!);
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedEmail == normalized);
+        if (user is not null) emails.SendPasswordReset(user);
+        return Accepted();
+    }
+
+    // Sets a new password from a reset link. Opening the link proves the email
+    // is theirs, so it also counts as confirming it. Every device is signed out;
+    // the user then logs in with the new password (and their authenticator code,
+    // if two-step verification is on).
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+    {
+        var link = emailTokens.Read(request.Token, "reset");
+        var user = link is { } l ? await db.Users.FirstOrDefaultAsync(u => u.Id == l.UserId) : null;
+        if (user is null || user.SecurityStamp != link!.Value.Value)
+        {
+            return BadRequest(Failure("This reset link has expired or was already used. Ask for a new one."));
+        }
+
+        user.PasswordHash = hasher.HashPassword(user, request.Password!);
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        user.FailedLoginCount = 0;
+        user.LockoutEndsAt = null;
+        user.EmailVerifiedAt ??= clock.UtcNow;
+        await db.SaveChangesAsync();
+        emails.SendPasswordChanged(user);
+        logger.LogInformation("Account {UserId} reset its password by email.", user.Id);
+        return NoContent();
+    }
+
+    // Confirms the email from the link sent at sign-up (or by "Resend").
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<ActionResult<UserResponse>> VerifyEmail(VerifyEmailRequest request)
+    {
+        var link = emailTokens.Read(request.Token, "verify");
+        var user = link is { } l ? await db.Users.FirstOrDefaultAsync(u => u.Id == l.UserId) : null;
+        if (user is null || user.NormalizedEmail != link!.Value.Value)
+        {
+            return BadRequest(Failure("This confirmation link has expired or isn't valid. Ask for a new one."));
+        }
+        user.EmailVerifiedAt ??= clock.UtcNow;
+        await db.SaveChangesAsync();
+        return UserResponse.From(user);
+    }
+
+    // Sends the confirmation link again to the signed-in user's email.
+    [HttpPost("resend-verification")]
+    [EnableRateLimiting(RateLimits.Auth)]
+    public async Task<IActionResult> ResendVerification()
+    {
+        if (!emails.IsEnabled) return EmailUnavailable();
+        var user = await CurrentUserAsync();
+        if (user.EmailVerifiedAt is not null) return Conflict(Failure("Your email is already confirmed."));
+        emails.SendVerification(user);
+        return Accepted();
+    }
 
     // Continue with Google. Signs in the account connected to this Google
     // account; otherwise creates one, unless the email already has a PennyWise
@@ -171,6 +246,7 @@ public class AuthController(
                 NormalizedEmail = normalized,
                 GoogleSubject = person.Subject,
                 SecurityStamp = Guid.NewGuid().ToString("N"),
+                EmailVerifiedAt = clock.UtcNow, // Google only gives verified emails
                 CreatedAt = clock.UtcNow,
             };
             db.Users.Add(user);
@@ -211,6 +287,7 @@ public class AuthController(
             return Conflict(Failure("This Google account is already connected to another PennyWise account."));
         }
         user.GoogleSubject = subject;
+        user.EmailVerifiedAt ??= clock.UtcNow; // Google confirmed this same email
         await db.SaveChangesAsync();
         logger.LogInformation("Account {UserId} connected Google sign-in.", user.Id);
         return await FinishSignInAsync(user);
@@ -319,6 +396,7 @@ public class AuthController(
         user.FailedLoginCount = 0;
         user.LockoutEndsAt = null;
         await db.SaveChangesAsync();
+        emails.SendPasswordChanged(user);
         await SignInAsync(user);
         return NoContent();
     }
@@ -427,6 +505,12 @@ public class AuthController(
         return StatusCode(StatusCodes.Status429TooManyRequests,
             Failure($"Too many wrong attempts. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}."));
     }
+
+    private ObjectResult EmailUnavailable() => StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+    {
+        Status = StatusCodes.Status503ServiceUnavailable,
+        Title = "Email isn't set up on this server yet, so PennyWise can't send you a link.",
+    });
 
     // The user a sign-in ticket was made for, if it is unexpired and the
     // password has not changed since.

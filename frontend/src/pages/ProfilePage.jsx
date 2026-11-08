@@ -354,7 +354,7 @@ function NameForm() {
           />
         )}
       </FormField>
-      <FormField label="Email" hint="Your email is how you log in, so it can’t be changed here.">
+      <FormField label="Email" hint={`${user.emailVerified ? 'Confirmed.' : 'Not confirmed yet.'} Your email is how you log in, so it can’t be changed here.`}>
         {(props) => <input {...props} type="email" value={user.email} readOnly />}
       </FormField>
       <div className="profile__actions">

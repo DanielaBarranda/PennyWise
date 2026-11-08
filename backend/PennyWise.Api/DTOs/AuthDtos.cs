@@ -130,16 +130,48 @@ public record TwoFactorSetupResponse(string Key, string Uri);
 public record RecoveryCodesResponse(IReadOnlyList<string> RecoveryCodes);
 
 // What the sign-in page needs to know before anyone signs in.
-public record AuthOptionsResponse(string? GoogleClientId);
+// EmailEnabled: whether this server can send email (password reset, confirmation).
+public record AuthOptionsResponse(string? GoogleClientId, bool EmailEnabled);
+
+public class ForgotPasswordRequest
+{
+    [Required(ErrorMessage = "Email is required.")]
+    [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+    [StringLength(254, ErrorMessage = "Email must be 254 characters or fewer.")]
+    public string? Email { get; set; }
+}
+
+public class ResetPasswordRequest
+{
+    [Required(ErrorMessage = "This reset link is incomplete. Ask for a new one.")]
+    [StringLength(2000)]
+    public string? Token { get; set; }
+
+    [Required(ErrorMessage = "Enter a new password.")]
+    [PasswordStrength]
+    public string? Password { get; set; }
+
+    [Required(ErrorMessage = "Confirm your new password.")]
+    [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+    public string? ConfirmPassword { get; set; }
+}
+
+public class VerifyEmailRequest
+{
+    [Required(ErrorMessage = "This confirmation link is incomplete. Ask for a new one.")]
+    [StringLength(2000)]
+    public string? Token { get; set; }
+}
 
 // What the browser learns about the signed-in user. Never the password hash,
 // security stamp or lockout details.
 // AvatarVersion is null when there is no profile photo; otherwise it changes
 // whenever the photo does, and goes on the photo URL to bust the cache.
 public record UserResponse(int Id, string Name, string Email, DateTime MemberSince, string BudgetPeriod, string? AvatarVersion,
-    bool HasPassword, bool GoogleConnected, bool TwoFactorEnabled, int RecoveryCodesLeft, bool TourCompleted)
+    bool HasPassword, bool GoogleConnected, bool TwoFactorEnabled, int RecoveryCodesLeft, bool TourCompleted, bool EmailVerified)
 {
     public static UserResponse From(User u) => new(u.Id, u.Name, u.Email, u.CreatedAt, u.BudgetPeriod.ToString(),
         u.AvatarUpdatedAt is { } t ? t.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture) : null,
-        u.HasPassword, u.GoogleSubject is not null, u.TwoFactorEnabled, TwoFactorService.RecoveryCodesLeft(u), u.TourCompletedAt is not null);
+        u.HasPassword, u.GoogleSubject is not null, u.TwoFactorEnabled, TwoFactorService.RecoveryCodesLeft(u), u.TourCompletedAt is not null,
+        u.EmailVerifiedAt is not null);
 }
