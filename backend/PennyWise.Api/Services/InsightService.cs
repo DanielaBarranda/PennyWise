@@ -72,7 +72,8 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
         // 2. Overall budget (spending plus money moved into savings in the period)
         if (budget is not null && budget.Amount > 0)
         {
-            var used = spent + await SavingsService.SetAsideAsync(db, userId, first, last);
+            var used = spent + await SavingsService.SetAsideAsync(db, userId, first, last)
+                + await CarryOverService.CarriedOutAsync(db, budget.Id);
             var percent = used / budget.Amount * 100;
             if (used > budget.Amount)
             {

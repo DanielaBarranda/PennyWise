@@ -41,6 +41,7 @@ export default function SummaryCards({ summary, period, onSetBudget, onShowCateg
     <section className="stats" aria-label={`Summary for ${periodLabel(period, summary.start)}`}>
       <StatCard icon="target" tone="primary" label={`${period} budget`} value={budget ? formatPeso(budget.amount) : 'Not set'}>
         {budget ? `For ${periodLabel(period, summary.start)}` : 'Set one to track what is left'}
+        {summary.carriedIn > 0 && <span className="stat__saved">Includes {formatPeso(summary.carriedIn)} left from last {unit}</span>}
       </StatCard>
 
       <StatCard icon="spent" tone="gold" label="Total spent" value={formatPeso(summary.totalSpent)}>
@@ -62,6 +63,7 @@ export default function SummaryCards({ summary, period, onSetBudget, onShowCateg
         ) : (
           'Needs a budget'
         )}
+        {summary.carriedOut > 0 && <span className="stat__saved">{formatPeso(summary.carriedOut)} moved to next {unit}</span>}
       </StatCard>
 
       {!budget ? (

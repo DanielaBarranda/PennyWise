@@ -10,7 +10,7 @@ namespace PennyWise.Api.Services;
 // Calculates every dashboard number on the server from the database, so the
 // frontend only displays values; it never invents totals of its own.
 // Only the signed-in user's budget and expenses are counted.
-public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
+public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser, CarryOverService carryOvers)
 {
     // Must match WARNING_PERCENT in frontend/src/utils/constants.js.
     public const decimal WarningPercent = 80m;
@@ -36,7 +36,9 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
         var totalSpent = expenses.Sum(e => e.Amount);
         // Money moved into savings in the period also comes out of its budget.
         var saved = await SavingsService.SetAsideAsync(db, userId, first, last);
-        var used = totalSpent + saved;
+        // Money left here and added to the next period's budget counts as used.
+        var carriedOut = await CarryOverService.CarriedOutAsync(db, budget?.Id);
+        var used = totalSpent + saved + carriedOut;
 
         var categories = Enum.GetValues<Category>().Select(category =>
         {
@@ -72,13 +74,16 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             Budget: budget is null ? null : BudgetResponse.From(budget),
             TotalSpent: totalSpent,
             Saved: saved,
+            CarriedIn: await CarryOverService.CarriedInAsync(db, budget?.Id),
+            CarriedOut: carriedOut,
             Remaining: budget is null ? null : budget.Amount - used,
             PercentSpent: budget is null ? null : Math.Round(used / budget.Amount * 100, 2),
             Status: budget is null ? "NoBudget" : StatusFor(used, budget.Amount),
             ExpenseCount: expenses.Count,
             Categories: categories,
             RecentExpenses: recent,
-            RecentSavings: recentSavings);
+            RecentSavings: recentSavings,
+            LeftoverOffer: await carryOvers.OfferAsync(window, budget?.Id));
     }
 
     // Below 80% = OnTrack, 80% up to 100% = Warning, above 100% = Exceeded.

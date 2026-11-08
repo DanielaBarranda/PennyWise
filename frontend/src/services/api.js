@@ -119,6 +119,8 @@ export const api = {
   getBudget: (id) => request(`/budgets/${id}`),
   createBudget: (budget) => request('/budgets', { method: 'POST', body: budget }),
   updateBudget: (id, budget) => request(`/budgets/${id}`, { method: 'PUT', body: budget }),
+  // What to do with the money left in the period before budget {id}: { action, category?, goalId? }.
+  carryOver: (id, choice) => request(`/budgets/${id}/carryover`, { method: 'POST', body: choice }),
   deleteBudget: (id) => request(`/budgets/${id}`, { method: 'DELETE' }),
 
   getExpenses: ({ month, category } = {}) => request('/expenses', { query: { month, category } }),

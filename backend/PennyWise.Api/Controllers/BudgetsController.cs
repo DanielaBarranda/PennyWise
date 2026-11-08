@@ -7,7 +7,7 @@ namespace PennyWise.Api.Controllers;
 
 [ApiController]
 [Route("api/budgets")]
-public class BudgetsController(BudgetService budgets, AppClock clock) : ControllerBase
+public class BudgetsController(BudgetService budgets, CarryOverService carryOvers, AppClock clock) : ControllerBase
 {
     // GET /api/budgets?month=2026-10           every budget starting in October (any period)
     // GET /api/budgets?period=Weekly&date=...  the budget for the week containing that date (or none)
@@ -40,6 +40,12 @@ public class BudgetsController(BudgetService budgets, AppClock clock) : Controll
     [HttpPut("{id:int}")]
     public async Task<ActionResult<BudgetResponse>> Update(int id, BudgetRequest request) =>
         await budgets.UpdateAsync(id, request);
+
+    // What to do with the money left in the period before this budget's period:
+    // add it to this budget, move it into a savings goal, or leave it.
+    [HttpPost("{id:int}/carryover")]
+    public async Task<ActionResult<CarryOverResponse>> CarryOver(int id, CarryOverRequest request) =>
+        await carryOvers.ApplyAsync(id, request);
 
     // Removes the budget so the period has none; expenses stay as they are.
     [HttpDelete("{id:int}")]

@@ -41,6 +41,7 @@ builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<LegacyDataClaimer>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<BudgetService>();
+builder.Services.AddScoped<CarryOverService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<SavingsService>();
 builder.Services.AddScoped<AvatarService>();

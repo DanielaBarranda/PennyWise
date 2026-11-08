@@ -154,6 +154,8 @@ Everything in it is for that one period: its own budget and the expenses dated i
   "budget": { "...Budget object..." },
   "totalSpent": 6520.50,
   "saved": 200.00,
+  "carriedIn": 0,
+  "carriedOut": 0,
   "remaining": 1279.50,
   "percentSpent": 84.01,
   "status": "Warning",
@@ -163,12 +165,15 @@ Everything in it is for that one period: its own budget and the expenses dated i
     { "category": "School", "total": 0, "limit": null, "status": "NoLimit" }
   ],
   "recentExpenses": [ "...up to 5 Expense objects, newest expenseDate first..." ],
-  "recentSavings": [ "...up to 5 savings moves in the period, newest first: { id, goalId, goalName, type, amount, date, note, createdAt }..." ]
+  "recentSavings": [ "...up to 5 savings moves in the period, newest first: { id, goalId, goalName, type, amount, date, note, createdAt }..." ],
+  "leftoverOffer": null
 }
 ```
 
 - `budget` is `null` when the period has no budget. In that case `remaining` and `percentSpent` are `null`, and `status` is `"NoBudget"`.
 - `saved` is the money moved into savings goals inside the period: deposits minus withdrawals, never below 0 (withdrawing money saved earlier does not add to a budget). It is not spending, so `totalSpent` and the categories leave it out, but it comes out of the budget: `remaining = budget − totalSpent − saved` and `percentSpent = (totalSpent + saved) / budget`.
+- `carriedIn` is the part of `budget.amount` that was left from the period before. `carriedOut` is money left in this period that was added to the next period's budget; it counts as used, so `remaining = budget − totalSpent − saved − carriedOut`.
+- `leftoverOffer` is `{ fromBudgetId, period, start, end, amount }` when the period before this one is over, had a budget with money left, and the user has not decided what to do with it yet (see `POST /api/budgets/{id}/carryover`). Otherwise `null`.
 - `status` is `"OnTrack"` below 80%, `"Warning"` from 80% up to 100%, and `"Exceeded"` above 100%, of that same spent-plus-saved amount.
 - `categories` always has all six categories. Each one's `status` is `"NoLimit"`, `"OnTrack"`, `"Warning"` or `"Exceeded"`.
 
@@ -181,11 +186,18 @@ Everything in it is for that one period: its own budget and the expenses dated i
 | POST | `/api/budgets` | `{ period, start, amount, categoryLimits[] }` | 201 Budget, or 409 if that period already has one |
 | PUT | `/api/budgets/{id}` | `{ period, start, amount, categoryLimits[] }` | 200 Budget |
 | DELETE | `/api/budgets/{id}` | | 204; the period has no budget again (expenses are not touched) |
+| POST | `/api/budgets/{id}/carryover` | `{ action, category?, goalId? }` | 200 `{ action, amount, fromStart, fromEnd, category, goalName }`; 409 if there is nothing to move or it was already decided |
 
 `period` defaults to `Monthly`. A monthly budget may send `month` instead of `start`. `start` must
 be the first day of the period: any day for Daily, a Monday for Weekly, the 1st for Monthly.
 
 Validation: each category can appear at most once in `categoryLimits`, and all the limits together cannot add up to more than `amount`.
+
+**Money left from the period before.** `{id}` is the budget that would receive it; the API works out the amount (the previous period's budget minus its spending, savings and anything already moved). It can be decided once per finished budget:
+- `AddToBudget`: raises this budget's `amount` by the leftover, and the limit of `category` too if one is sent (it must already have a limit). The finished period counts the money as used.
+- `MoveToSavings`: adds a deposit of the leftover to goal `goalId`, dated on the finished period's last day.
+- `Keep`: nothing moves; the money stays as left in the finished period.
+Deleting either budget removes the decision.
 
 When an expense takes a category over its limit, the app offers to cover the difference: it sends a `PUT` that raises that limit and lowers another category's (which keeps at least ₱1), or uses budget not given to any category. The budget's `amount` never changes.
 

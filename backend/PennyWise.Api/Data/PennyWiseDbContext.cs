@@ -15,6 +15,7 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
     public DbSet<SavingsTransaction> SavingsTransactions => Set<SavingsTransaction>();
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<BillPayment> BillPayments => Set<BillPayment>();
+    public DbSet<BudgetCarryOver> BudgetCarryOvers => Set<BudgetCarryOver>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +102,20 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
                 .WithOne()
                 .HasForeignKey(l => l.BudgetId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BudgetCarryOver>(entity =>
+        {
+            entity.Property(c => c.Action).HasConversion<string>().HasMaxLength(20);
+            entity.Property(c => c.Category).HasConversion<string>().HasMaxLength(20);
+            // One decision per finished budget.
+            entity.HasIndex(c => c.FromBudgetId).IsUnique();
+            entity.HasIndex(c => c.ToBudgetId);
+            entity.HasOne<User>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Removing either budget removes the decision, so the leftover can be decided again.
+            entity.HasOne<Budget>().WithMany().HasForeignKey(c => c.FromBudgetId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Budget>().WithMany().HasForeignKey(c => c.ToBudgetId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<SavingsTransaction>().WithMany().HasForeignKey(c => c.SavingsTransactionId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CategoryLimit>(entity =>

@@ -112,6 +112,8 @@ export default function ReportsPage({ month, onMonthChange, period }) {
                         <td>
                           <span className="data-table__strong">{periodLabel(b.period, b.start)}</span>
                           <span className="data-table__muted"> · {b.period === 'Weekly' ? 'Week' : 'Day'}</span>
+                          {b.carriedIn > 0 && <span className="report__carry">Includes {formatPeso(b.carriedIn)} left from the {b.period === 'Weekly' ? 'week' : 'day'} before</span>}
+                          {b.carriedOut > 0 && <span className="report__carry">{formatPeso(b.carriedOut)} moved to the next {b.period === 'Weekly' ? 'week' : 'day'}</span>}
                         </td>
                         <td className="num">{formatPeso(b.amount)}</td>
                         <td className="num">{formatPeso(b.spent)}</td>

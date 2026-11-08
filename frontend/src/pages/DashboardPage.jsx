@@ -13,6 +13,7 @@ import InsightsPreview from '../components/dashboard/InsightsPreview.jsx'
 import UpcomingBills from '../components/dashboard/UpcomingBills.jsx'
 import SavingsPreview from '../components/dashboard/SavingsPreview.jsx'
 import BudgetFormModal from '../components/dashboard/BudgetFormModal.jsx'
+import LeftoverCard from '../components/dashboard/LeftoverCard.jsx'
 import ExpenseFormModal from '../components/expenses/ExpenseFormModal.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { api } from '../services/api.js'
@@ -84,6 +85,7 @@ export default function DashboardPage({ period, start, onStartChange }) {
       ) : (
         <div className="dashboard" aria-busy={loading}>
           {error && <ErrorState error={error} onRetry={reload} />}
+          {current.leftoverOffer && hasBudget && <LeftoverCard offer={current.leftoverOffer} budget={current.budget} onDone={reload} />}
           <SummaryCards summary={current} period={period} onSetBudget={() => setBudgetOpen(true)} onShowCategories={showCategories} />
           <div className="dashboard__columns dashboard__columns--even">
             <AllowanceCard period={period} start={start} refreshKey={refreshKey} />

@@ -60,7 +60,7 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         var contributions = monthTx.Where(t => t.Type == SavingsTransactionType.Contribution).Sum(t => t.Amount);
         var withdrawals = monthTx.Where(t => t.Type == SavingsTransactionType.Withdrawal).Sum(t => t.Amount);
         // Spending plus the money moved into savings this month is what the budget has used.
-        var used = totalSpent + Math.Max(contributions - withdrawals, 0);
+        var used = totalSpent + Math.Max(contributions - withdrawals, 0) + await CarryOverService.CarriedOutAsync(db, budget?.Id);
         var reportGoals = goals
             .Where(g => DateOnly.FromDateTime(g.CreatedAt) <= last && (g.ArchivedAt is null || DateOnly.FromDateTime(g.ArchivedAt.Value) >= first))
             .Select(g =>
@@ -92,8 +92,10 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
                 .Where(e => e.UserId == userId && e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
                 .Select(e => e.Amount).ToListAsync()).Sum();
             var savedInWindow = await SavingsService.SetAsideAsync(db, userId, window.Start, window.End);
+            var carriedIn = await CarryOverService.CarriedInAsync(db, b.Id);
+            var carriedOut = await CarryOverService.CarriedOutAsync(db, b.Id);
             reportPeriodBudgets.Add(new ReportPeriodBudget(b.Period.ToString(), window.Start, window.End, b.Amount, spentInWindow,
-                savedInWindow, b.Amount - spentInWindow - savedInWindow));
+                savedInWindow, carriedIn, carriedOut, b.Amount - spentInWindow - savedInWindow - carriedOut));
         }
 
         // Every transaction in the month, so each day, week or month can be checked line by line.
@@ -120,6 +122,10 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         if (reportPeriodBudgets.Count > 0)
         {
             notes.Add("Weekly and daily budgets are shown on their own, with the spending inside their own dates. They are not added up into a monthly budget.");
+            if (reportPeriodBudgets.Any(b => b.CarriedIn > 0 || b.CarriedOut > 0))
+            {
+                notes.Add("Money left at the end of one period and added to the next is counted as used in the first and is part of the budget in the second, so it is counted once.");
+            }
         }
 
         return new MonthlyReportResponse(
@@ -165,8 +171,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         Row();
         if (r.PeriodBudgets.Count > 0)
         {
-            Row("Weekly or daily budget", "Start", "End", "Budget", "Spent", "Moved to savings", "Left");
-            foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.Spent, b.Saved, b.Left);
+            Row("Weekly or daily budget", "Start", "End", "Budget", "From the period before", "Spent", "Moved to savings", "Moved to the next period", "Left");
+            foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.CarriedIn, b.Spent, b.Saved, b.CarriedOut, b.Left);
             Row();
         }
         Row("Date", "Transaction", "Description", "Category or goal", "Amount");

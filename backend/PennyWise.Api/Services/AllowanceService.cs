@@ -11,6 +11,7 @@ namespace PennyWise.Api.Services;
 // period's own budget is the limit; nothing is converted from another period.
 //
 //   available = budget - spent in the period - moved into savings in the period
+//               - added to the next period's budget (see CarryOverService)
 //               - unpaid bills due in the period (overdue ones included)
 //   daily     = available / days left in the period (today included), rounded down to the centavo
 //   total     = available
@@ -25,9 +26,10 @@ public class AllowanceService(PennyWiseDbContext db, AppClock clock, CurrentUser
         var (first, last) = (window.Start, window.End);
         var today = clock.Today();
 
-        var budget = await db.Budgets.AsNoTracking()
+        var row = await db.Budgets.AsNoTracking()
             .Where(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start)
-            .Select(b => (decimal?)b.Amount).FirstOrDefaultAsync();
+            .Select(b => new { b.Id, b.Amount }).FirstOrDefaultAsync();
+        var budget = row?.Amount;
         var spent = (await db.Expenses.AsNoTracking()
             .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => e.Amount).ToListAsync()).Sum();
@@ -46,7 +48,7 @@ public class AllowanceService(PennyWiseDbContext db, AppClock clock, CurrentUser
             return new AllowanceResponse(window.Period.ToString(), first, last, "NoBudget", null, spent, saved, reserved, null, daysLeft, null, null);
         }
 
-        var available = budget.Value - spent - saved - reserved;
+        var available = budget.Value - spent - saved - reserved - await CarryOverService.CarriedOutAsync(db, row!.Id);
         var spendable = Math.Max(available, 0);
         var daily = daysLeft > 0 ? Math.Floor(spendable / daysLeft * 100) / 100 : 0;
         var status = ended ? "Ended" : available < 0 ? "OverBudget" : "Available";

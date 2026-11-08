@@ -767,6 +767,52 @@
   color: var(--muted);
 }
 
+/* ================= Money left from last period ================= */
+.leftover {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface));
+}
+
+.leftover__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: var(--gold);
+}
+
+.leftover__text {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.leftover__text span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.leftover__sub {
+  margin: -2px 0 4px 30px;
+}
+
+.report__carry {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
 /* ================= Print / Save as PDF ================= */
 /* Prints the report on white paper, whatever theme is on screen. */
 @media print {

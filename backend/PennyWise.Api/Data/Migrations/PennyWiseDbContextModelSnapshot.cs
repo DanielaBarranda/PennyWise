@@ -147,6 +147,53 @@ namespace PennyWise.Api.Data.Migrations
                     b.ToTable("Budgets");
                 });
 
+            modelBuilder.Entity("PennyWise.Api.Models.BudgetCarryOver", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FromBudgetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SavingsTransactionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ToBudgetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromBudgetId")
+                        .IsUnique();
+
+                    b.HasIndex("SavingsTransactionId");
+
+                    b.HasIndex("ToBudgetId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BudgetCarryOvers");
+                });
+
             modelBuilder.Entity("PennyWise.Api.Models.CategoryLimit", b =>
                 {
                     b.Property<int>("Id")
@@ -420,6 +467,32 @@ namespace PennyWise.Api.Data.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("PennyWise.Api.Models.BudgetCarryOver", b =>
+                {
+                    b.HasOne("PennyWise.Api.Models.Budget", null)
+                        .WithMany()
+                        .HasForeignKey("FromBudgetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PennyWise.Api.Models.SavingsTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("SavingsTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("PennyWise.Api.Models.Budget", null)
+                        .WithMany()
+                        .HasForeignKey("ToBudgetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PennyWise.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PennyWise.Api.Models.CategoryLimit", b =>
