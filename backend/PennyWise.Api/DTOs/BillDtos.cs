@@ -57,6 +57,10 @@ public class BillPaymentRequest
     // True: also record the payment as one expense (linked to this payment).
     // False: the payment was already recorded as an expense, or should not be.
     public bool RecordExpense { get; set; } = true;
+
+    // With RecordExpense: pay with money taken out of this savings goal or fund
+    // instead of the budget. Null pays from the budget.
+    public int? PayFromGoalId { get; set; }
 }
 
 public record BillResponse(

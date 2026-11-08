@@ -101,6 +101,23 @@ public class BillService(PennyWiseDbContext db, AppClock clock, CurrentUser curr
             throw new ConflictException("This bill is already marked as paid for that due date.");
         }
 
+        SavingsGoal? payFrom = null;
+        if (request.RecordExpense && request.PayFromGoalId is { } goalId)
+        {
+            var userId = currentUser.Id;
+            payFrom = await db.SavingsGoals.Include(g => g.Transactions).FirstOrDefaultAsync(g => g.Id == goalId && g.UserId == userId)
+                ?? throw new ValidationFailedException(nameof(request.PayFromGoalId), "Choose one of your savings.");
+            if (payFrom.ArchivedAt is not null)
+            {
+                throw new ValidationFailedException(nameof(request.PayFromGoalId), $"{payFrom.Name} is archived. Restore it first.");
+            }
+            if (SavingsService.Saved(payFrom) < bill.Amount)
+            {
+                throw new ValidationFailedException(nameof(request.PayFromGoalId),
+                    $"{payFrom.Name} has {InsightService.Peso(SavingsService.Saved(payFrom))}, not enough for {InsightService.Peso(bill.Amount)}.");
+            }
+        }
+
         var payment = new BillPayment { BillId = bill.Id, DueDate = dueDate, PaidOn = paidOn, Amount = bill.Amount, CreatedAt = clock.UtcNow };
         if (request.RecordExpense)
         {
@@ -117,6 +134,7 @@ public class BillService(PennyWiseDbContext db, AppClock clock, CurrentUser curr
         }
         bill.Payments.Add(payment);
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
         try
         {
             await db.SaveChangesAsync(); // payment and its expense are saved together, or not at all
@@ -125,6 +143,23 @@ public class BillService(PennyWiseDbContext db, AppClock clock, CurrentUser curr
         {
             throw new ConflictException("This bill is already marked as paid for that due date.");
         }
+        // Paid from savings: take the money out, linked to the expense, so the
+        // expense is not counted against a budget.
+        if (payFrom is not null)
+        {
+            payFrom.Transactions.Add(new SavingsTransaction
+            {
+                Type = SavingsTransactionType.Withdrawal,
+                Amount = bill.Amount,
+                Date = paidOn,
+                Note = Truncate($"Paid {bill.Name}", 120),
+                ExpenseId = payment.Expense!.Id,
+                CreatedAt = clock.UtcNow,
+            });
+            payFrom.UpdatedAt = clock.UtcNow;
+            await db.SaveChangesAsync();
+        }
+        await transaction.CommitAsync();
         return OccurrencesFor(bill, dueDate, dueDate, today).Single();
     }
 
@@ -140,6 +175,9 @@ public class BillService(PennyWiseDbContext db, AppClock clock, CurrentUser curr
             var userId = currentUser.Id;
             var expense = await db.Expenses.FirstOrDefaultAsync(e => e.Id == expenseId && e.UserId == userId);
             if (expense is not null) db.Expenses.Remove(expense);
+            // Paid from savings: the money goes back in.
+            var withdrawal = await db.SavingsTransactions.FirstOrDefaultAsync(t => t.ExpenseId == expenseId);
+            if (withdrawal is not null) db.SavingsTransactions.Remove(withdrawal);
         }
         db.BillPayments.Remove(payment);
         await db.SaveChangesAsync();

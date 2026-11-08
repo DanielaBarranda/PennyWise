@@ -116,25 +116,31 @@ export default function SavingsPage() {
 
 const STATUS = { Active: 'In progress', Completed: 'Goal reached', Archived: 'Archived' }
 
-// The sum of every goal and fund that isn't archived.
+const sumSaved = (list) => list.reduce((sum, g) => sum + Math.round(g.savedAmount * 100), 0) / 100
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
+
+// Two totals, kept apart: money in funds (no target, like a wallet or an
+// envelope) and money put toward goals. Archived ones are left out.
 function SavingsTotal({ goals }) {
   const active = goals.filter((g) => g.status !== 'Archived')
-  const total = active.reduce((sum, g) => sum + Math.round(g.savedAmount * 100), 0) / 100
-  const funds = active.filter((g) => g.targetAmount == null).length
-  const withTarget = active.length - funds
-  const parts = [
-    withTarget > 0 && `${withTarget} ${withTarget === 1 ? 'goal' : 'goals'}`,
-    funds > 0 && `${funds} ${funds === 1 ? 'fund' : 'funds'}`,
-  ].filter(Boolean)
+  const funds = active.filter((g) => g.targetAmount == null)
+  const targets = active.filter((g) => g.targetAmount != null)
   return (
-    <section className="savings-total" aria-label="Total savings">
+    <section className="savings-total" aria-label="Savings totals">
       <span className="savings-total__icon" aria-hidden="true">
         <Icon name="piggy" size={22} />
       </span>
-      <div>
-        <p className="savings-total__label">Total savings</p>
-        <p className="savings-total__value">{formatPeso(total)}</p>
-        {parts.length > 0 && <p className="savings-total__note">Across {parts.join(' and ')}</p>}
+      <div className="savings-total__figures">
+        <div>
+          <p className="savings-total__label">Total savings</p>
+          <p className="savings-total__value">{formatPeso(sumSaved(funds))}</p>
+          <p className="savings-total__note">{funds.length ? `In ${count(funds.length, 'fund', 'funds')}` : 'No funds yet'}</p>
+        </div>
+        <div>
+          <p className="savings-total__label">Saved toward goals</p>
+          <p className="savings-total__value savings-total__value--goals">{formatPeso(sumSaved(targets))}</p>
+          <p className="savings-total__note">{targets.length ? `For ${count(targets.length, 'goal', 'goals')}` : 'No goals yet'}</p>
+        </div>
       </div>
     </section>
   )

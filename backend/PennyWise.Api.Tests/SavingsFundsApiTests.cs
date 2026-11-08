@@ -110,6 +110,41 @@ public class SavingsFundsApiTests : FeatureTestBase
     }
 
     [Fact]
+    public async Task A_bill_paid_from_savings_takes_the_money_out_and_skips_the_budget()
+    {
+        await WeeklyBudgetAsync();
+        var fund = await PostAsync<SavingsGoalResponse>("/api/savings", new { name = "Bills fund", startingAmount = 2000 });
+        var bill = await CreateBillAsync("Internet", 1299, "Monthly", "2026-10-20");
+
+        var paid = await Client.PostAsJsonAsync($"/api/bills/{bill.Id}/payments", new { dueDate = "2026-10-20", payFromGoalId = fund.Id });
+        paid.EnsureSuccessStatusCode();
+
+        Assert.Equal(701m, (await Client.GetFromJsonAsync<SavingsGoalResponse>($"/api/savings/{fund.Id}"))!.SavedAmount);
+        var summary = await SummaryAsync();
+        Assert.Equal((0m, 1299m, 1000m), (summary.TotalSpent, summary.SpentFromSavings, summary.Remaining!.Value));
+        Assert.Equal("Bills fund", Assert.Single(summary.RecentExpenses).PaidFrom);
+
+        // Undoing the payment puts the money back.
+        (await Client.DeleteAsync($"/api/bills/{bill.Id}/payments/2026-10-20")).EnsureSuccessStatusCode();
+        Assert.Equal(2000m, (await Client.GetFromJsonAsync<SavingsGoalResponse>($"/api/savings/{fund.Id}"))!.SavedAmount);
+        Assert.Empty((await SummaryAsync()).RecentExpenses);
+    }
+
+    [Fact]
+    public async Task A_bill_cannot_be_paid_from_savings_that_are_too_small()
+    {
+        var fund = await PostAsync<SavingsGoalResponse>("/api/savings", new { name = "Wallet", startingAmount = 500 });
+        var bill = await CreateBillAsync("Internet", 1299, "Monthly", "2026-10-20");
+
+        var response = await Client.PostAsJsonAsync($"/api/bills/{bill.Id}/payments", new { dueDate = "2026-10-20", payFromGoalId = fund.Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty((await Client.GetFromJsonAsync<List<ExpenseResponse>>("/api/expenses?month=2026-10"))!);
+        Assert.NotEqual("Paid", (await OccurrencesAsync("2026-10-20", "2026-10-20")).Single().Status);
+        Assert.Equal(500m, (await Client.GetFromJsonAsync<SavingsGoalResponse>($"/api/savings/{fund.Id}"))!.SavedAmount);
+    }
+
+    [Fact]
     public async Task The_report_keeps_spending_from_savings_out_of_the_budget()
     {
         await CreateBudgetAsync("2026-10", 1000);

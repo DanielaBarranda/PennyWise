@@ -258,8 +258,8 @@ shorter months. Due dates before the bill was added are not treated as owed.
 | POST | `/api/bills` | `{ name, amount, category, frequency, firstDueDate, endDate?, notes? }` | 201 Bill |
 | PUT | `/api/bills/{id}` | same as POST | 200 Bill |
 | POST | `/api/bills/{id}/archive` · `/restore` | | 200 Bill |
-| POST | `/api/bills/{id}/payments` | `{ dueDate, paidOn?, recordExpense = true }` | 200; 409 if that due date is already paid |
-| DELETE | `/api/bills/{id}/payments/{dueDate}` | | 204; also deletes the linked expense |
+| POST | `/api/bills/{id}/payments` | `{ dueDate, paidOn?, recordExpense = true, payFromGoalId? }` | 200; 409 if that due date is already paid. With `payFromGoalId`, the amount is taken out of that goal or fund (400 if it has too little) and the expense is paid from savings, so it does not use a budget |
+| DELETE | `/api/bills/{id}/payments/{dueDate}` | | 204; also deletes the linked expense, and puts money paid from savings back |
 
 Occurrence: `{ billId, name, amount, category, frequency, dueDate, status: "Paid" | "Overdue" |
 "DueSoon" | "Upcoming", daysUntilDue, paidOn, paidAmount, expenseId }`. "Due soon" means within

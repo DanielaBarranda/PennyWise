@@ -10,7 +10,9 @@ const SHOWN = 3
 export default function SavingsPreview({ refreshKey }) {
   const { data, error, reload } = useAsync(() => api.getSavingsGoals(), [refreshKey])
   const active = data?.filter((g) => g.status !== 'Archived') ?? []
-  const total = active.reduce((sum, g) => sum + Math.round(g.savedAmount * 100), 0) / 100
+  const sum = (list) => list.reduce((s, g) => s + Math.round(g.savedAmount * 100), 0) / 100
+  const fundTotal = sum(active.filter((g) => g.targetAmount == null))
+  const goalTotal = sum(active.filter((g) => g.targetAmount != null))
   const goals = active.filter((g) => g.targetAmount != null && g.status === 'Active').sort((a, b) => b.percentSaved - a.percentSaved)
   const funds = active.filter((g) => g.targetAmount == null).sort((a, b) => b.savedAmount - a.savedAmount)
   const shown = [...goals, ...funds].slice(0, SHOWN)
@@ -29,10 +31,16 @@ export default function SavingsPreview({ refreshKey }) {
         <EmptyState compact title="No savings yet" message="Add a goal, or a place you keep money like a wallet or an envelope." />
       ) : (
         <>
-          <p className="savings-preview__total">
-            <span>Total savings</span>
-            <strong>{formatPeso(total)}</strong>
-          </p>
+          <dl className="savings-preview__totals">
+            <div>
+              <dt>Total savings</dt>
+              <dd>{formatPeso(fundTotal)}</dd>
+            </div>
+            <div>
+              <dt>Toward goals</dt>
+              <dd>{formatPeso(goalTotal)}</dd>
+            </div>
+          </dl>
           <ul className="progress-list">
             {shown.map((g) =>
               g.targetAmount == null ? (
