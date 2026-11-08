@@ -33,8 +33,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             .Where(b => b.UserId == userId && b.Period != BudgetPeriod.Monthly && b.StartDate >= first && b.StartDate <= last)
             .OrderBy(b => b.StartDate).ThenBy(b => b.Period)
             .ToListAsync();
-        var expenses = await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= prevFirst && e.ExpenseDate <= last)
+        var expenses = await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= prevFirst && e.ExpenseDate <= last)
             .Select(e => new { e.Amount, e.Category, e.ExpenseDate }).ToListAsync();
         var current = expenses.Where(e => e.ExpenseDate >= first).ToList();
         var previous = expenses.Where(e => e.ExpenseDate <= prevLast).ToList();
@@ -60,7 +60,9 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         var contributions = monthTx.Where(t => t.Type == SavingsTransactionType.Contribution).Sum(t => t.Amount);
         var withdrawals = monthTx.Where(t => t.Type == SavingsTransactionType.Withdrawal).Sum(t => t.Amount);
         // Spending plus the money moved into savings this month is what the budget has used.
-        var used = totalSpent + Math.Max(contributions - withdrawals, 0) + await CarryOverService.CarriedOutAsync(db, budget?.Id);
+        var fromBudget = await SavingsService.SetAsideAsync(db, userId, first, last);
+        var spentFromSavings = await SavingsService.SpentFromSavingsAsync(db, userId, first, last);
+        var used = totalSpent + fromBudget + await CarryOverService.CarriedOutAsync(db, budget?.Id);
         var reportGoals = goals
             .Where(g => DateOnly.FromDateTime(g.CreatedAt) <= last && (g.ArchivedAt is null || DateOnly.FromDateTime(g.ArchivedAt.Value) >= first))
             .Select(g =>
@@ -68,7 +70,7 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
                 var saved = SavingsService.SavedUntil(g, last);
                 var tx = g.Transactions.Where(t => t.Date >= first && t.Date <= last).ToList();
                 return new ReportGoal(g.Name, g.TargetAmount, saved,
-                    g.TargetAmount > 0 ? Math.Round(saved / g.TargetAmount * 100, 1) : 0,
+                    g.TargetAmount > 0 ? Math.Round(saved / g.TargetAmount.Value * 100, 1) : 0,
                     tx.Where(t => t.Type == SavingsTransactionType.Contribution).Sum(t => t.Amount),
                     tx.Where(t => t.Type == SavingsTransactionType.Withdrawal).Sum(t => t.Amount));
             })
@@ -88,8 +90,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         foreach (var b in periodBudgets)
         {
             var window = BudgetWindow.For(b.Period, b.StartDate);
-            var spentInWindow = (await db.Expenses.AsNoTracking()
-                .Where(e => e.UserId == userId && e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
+            var spentInWindow = (await SavingsService.BudgetExpenses(db, userId)
+                .Where(e => e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
                 .Select(e => e.Amount).ToListAsync()).Sum();
             var savedInWindow = await SavingsService.SetAsideAsync(db, userId, window.Start, window.End);
             var carriedIn = await CarryOverService.CarriedInAsync(db, b.Id);
@@ -103,12 +105,15 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => new { e.ExpenseDate, e.Description, e.Category, e.Amount, e.CreatedAt, e.Id }).ToListAsync();
         var goalNames = goals.ToDictionary(g => g.Id, g => g.Name);
+        var paidFrom = monthTx.Where(t => t.ExpenseId != null).ToDictionary(t => t.ExpenseId!.Value, t => goalNames[t.GoalId]);
         var transactions = monthExpenses
-            .Select(e => (Row: new ReportTransaction(e.ExpenseDate, "Expense", e.Description, e.Category.ToString(), e.Amount), e.CreatedAt))
-            .Concat(monthTx.Select(t => (Row: new ReportTransaction(t.Date,
+            .Select(e => (Row: new ReportTransaction(e.ExpenseDate, "Expense", e.Description, e.Category.ToString(), e.Amount,
+                paidFrom.GetValueOrDefault(e.Id)), e.CreatedAt))
+            // A withdrawal that paid an expense is listed as that expense.
+            .Concat(monthTx.Where(t => t.ExpenseId == null).Select(t => (Row: new ReportTransaction(t.Date,
                 t.Type == SavingsTransactionType.Contribution ? "SavingsDeposit" : "SavingsWithdrawal",
                 string.IsNullOrWhiteSpace(t.Note) ? (t.Type == SavingsTransactionType.Contribution ? "Saved" : "Took out") : t.Note!,
-                goalNames[t.GoalId], t.Amount), t.CreatedAt)))
+                goalNames[t.GoalId], t.Amount, null, t.FromOutside), t.CreatedAt)))
             .OrderBy(x => x.Row.Date).ThenBy(x => x.CreatedAt)
             .Select(x => x.Row)
             .ToList();
@@ -117,7 +122,8 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
         {
             "Income is not recorded in PennyWise, so this report shows no income or net cash flow.",
             "Bill payments recorded as expenses are already included in total spending; the bills section does not add them again.",
-            "Savings deposits are money set aside, not spending, so they are not included in total spending. They do come out of the budget: budget used and remaining count spending plus the money moved into savings (deposits minus withdrawals).",
+            "Savings deposits are money set aside, not spending, so they are not included in total spending. Deposits from a budget come out of it: budget used and remaining count spending plus that money (minus withdrawals). Deposits of money from somewhere else do not touch a budget.",
+            "Expenses paid with money taken out of savings are listed, but they are not counted in total spending, budgets or category limits.",
         };
         if (reportPeriodBudgets.Count > 0)
         {
@@ -139,7 +145,7 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             previousTotal,
             previousTotal > 0 ? Math.Round((totalSpent - previousTotal) / previousTotal * 100, 1) : null,
             categories,
-            new ReportSavings(contributions, withdrawals, contributions - withdrawals, reportGoals),
+            new ReportSavings(contributions, withdrawals, contributions - withdrawals, fromBudget, spentFromSavings, reportGoals),
             new ReportBills(billItems.Count, paid.Count, unpaid.Count, paid.Sum(b => b.Amount), unpaid.Sum(b => b.Amount), billItems),
             reportPeriodBudgets,
             transactions,
@@ -175,17 +181,20 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.CarriedIn, b.Spent, b.Saved, b.CarriedOut, b.Left);
             Row();
         }
-        Row("Date", "Transaction", "Description", "Category or goal", "Amount");
+        Row("Date", "Transaction", "Description", "Category or goal", "Amount", "Paid from / source");
         foreach (var t in r.Transactions)
         {
             var kind = t.Kind switch { "SavingsDeposit" => "Savings deposit", "SavingsWithdrawal" => "Savings withdrawal", _ => "Expense" };
-            Row(t.Date, kind, t.Description, t.Category, t.Amount);
+            var source = t.PaidFrom is not null ? $"Savings: {t.PaidFrom}" : t.Kind == "SavingsDeposit" ? (t.FromOutside ? "Not from a budget" : "Budget") : "";
+            Row(t.Date, kind, t.Description, t.Category, t.Amount, source);
         }
         Row();
         Row("Savings", "Value");
         Row("Deposited this month", r.Savings.Contributions);
         Row("Withdrawn this month", r.Savings.Withdrawals);
         Row("Net set aside", r.Savings.Net);
+        Row("Of that, from budgets", r.Savings.FromBudget);
+        Row("Expenses paid from savings", r.Savings.SpentFromSavings);
         Row();
         Row("Savings goal", "Target", "Saved at month end", "Progress (%)", "Deposited this month", "Withdrawn this month");
         foreach (var g in r.Savings.Goals) Row(g.Name, g.TargetAmount, g.SavedAtMonthEnd, g.PercentAtMonthEnd, g.ContributedThisMonth, g.WithdrawnThisMonth);

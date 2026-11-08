@@ -32,8 +32,8 @@ public class CarryOverService(PennyWiseDbContext db, AppClock clock, CurrentUser
     public static async Task<decimal> LeftAsync(PennyWiseDbContext db, int userId, Budget budget)
     {
         var window = BudgetWindow.For(budget.Period, budget.StartDate);
-        var spent = (await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
+        var spent = (await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= window.Start && e.ExpenseDate <= window.End)
             .Select(e => e.Amount).ToListAsync()).Sum();
         var saved = await SavingsService.SetAsideAsync(db, userId, window.Start, window.End);
         return budget.Amount - spent - saved - await CarriedOutAsync(db, budget.Id);

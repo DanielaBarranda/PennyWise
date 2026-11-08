@@ -46,8 +46,12 @@ public record ExpenseResponse(
     string Description,
     DateOnly ExpenseDate,
     DateTime CreatedAt,
-    DateTime UpdatedAt)
+    DateTime UpdatedAt,
+    string? PaidFrom = null) // the savings goal or fund it was paid from; null when paid from the budget
 {
     public static ExpenseResponse From(Expense e) =>
         new(e.Id, e.Amount, e.Category.ToString(), e.Description, e.ExpenseDate, e.CreatedAt, e.UpdatedAt);
+
+    public static ExpenseResponse From(Expense e, IReadOnlyDictionary<int, string> paidFrom) =>
+        From(e) with { PaidFrom = paidFrom.GetValueOrDefault(e.Id) };
 }

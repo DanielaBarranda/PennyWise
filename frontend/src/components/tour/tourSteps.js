@@ -43,12 +43,12 @@ export const PAGE_STEPS = {
     {
       targets: ['savings-add'],
       title: 'Save for something',
-      body: 'Create a goal with a name and a target amount, like a laptop or an emergency fund. A target date is optional.',
+      body: 'Create a goal with a target, like a laptop, or leave the target empty for a place you keep money, like a wallet or an envelope. The total of everything shows at the top.',
     },
     {
       targets: ['savings-goal', 'savings-empty'],
-      title: 'Watch it grow',
-      body: 'Add money whenever you set some aside, or withdraw if you need it. History shows every change, and finished goals can be archived.',
+      title: 'Add or take out money',
+      body: 'When you add money, say if it came from your budget or from somewhere else. When you take money out to spend, you can add it as an expense that doesn’t use your budget. History shows every change.',
     },
   ],
   bills: [

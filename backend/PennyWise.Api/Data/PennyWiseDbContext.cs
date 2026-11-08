@@ -58,6 +58,8 @@ public class PennyWiseDbContext(DbContextOptions<PennyWiseDbContext> options) : 
             entity.Property(t => t.Type).HasConversion<string>().HasMaxLength(20);
             entity.Property(t => t.Note).HasMaxLength(120);
             entity.HasIndex(t => new { t.GoalId, t.Date });
+            entity.HasIndex(t => t.ExpenseId).IsUnique();
+            entity.HasOne<Expense>().WithMany().HasForeignKey(t => t.ExpenseId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Bill>(entity =>

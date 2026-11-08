@@ -121,7 +121,8 @@ export default function ExpensesPage({ month, onMonthChange }) {
         title="Delete this expense?"
         message={
           deleting &&
-          `“${deleting.description}” (${formatPeso(deleting.amount)} on ${formatDate(deleting.expenseDate)}) will be removed permanently. This can’t be undone.`
+          `“${deleting.description}” (${formatPeso(deleting.amount)} on ${formatDate(deleting.expenseDate)}) will be removed permanently. This can’t be undone.` +
+            (deleting.paidFrom ? ` The money goes back into ${deleting.paidFrom}.` : '')
         }
         confirmLabel="Delete expense"
         busy={deleteBusy}

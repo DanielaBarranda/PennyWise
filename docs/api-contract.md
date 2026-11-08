@@ -212,25 +212,38 @@ When an expense takes a category over its limit, the app offers to cover the dif
 
 Validation: `description` is required, is trimmed, and is at most 200 characters.
 
-### Savings goals
-A goal's saved amount is always worked out from its deposits and withdrawals; it is never
-stored or typed in. Saving does not count as spending, but money moved into savings comes out
-of the budget for the day, week or month it is dated in (see `saved` on the dashboard summary).
+### Savings goals and funds
+A goal has a target amount; a fund (for example "Wallet" or "Envelope") has none and only keeps a
+balance. The saved amount is always worked out from deposits and withdrawals; it is never stored
+or typed in. Saving does not count as spending.
+
+How savings touch a budget:
+- A deposit with `fromOutside: false` (from my budget) comes out of the budget for its date (see
+  `saved` on the dashboard summary). With `fromOutside: true` (money already owned, a gift) it does not.
+- A plain withdrawal gives money back to the budget of the same period, up to what was deposited from
+  that budget in it.
+- A withdrawal with `recordExpense: true` also creates an expense in `category` (description = `note`,
+  or "Paid from {name}"). That expense is paid from savings: it is listed with `paidFrom`, but it is
+  left out of `totalSpent`, budgets, category limits and allowances (the dashboard shows it as
+  `spentFromSavings`). Editing the expense changes the withdrawal; deleting it puts the money back.
 
 | Method | Route | Body | Success |
 |---|---|---|---|
 | GET | `/api/savings?includeArchived=false` | | 200, array of Goal |
 | GET | `/api/savings/{id}` | | 200 Goal, or 404 |
-| POST | `/api/savings` | `{ name, description?, targetAmount, targetDate? }` | 201 Goal |
-| PUT | `/api/savings/{id}` | same as POST | 200 Goal |
+| POST | `/api/savings` | `{ name, description?, targetAmount?, targetDate?, startingAmount? }` | 201 Goal |
+| PUT | `/api/savings/{id}` | `{ name, description?, targetAmount?, targetDate? }` | 200 Goal |
 | POST | `/api/savings/{id}/archive` · `/restore` | | 200 Goal |
-| GET | `/api/savings/{id}/transactions` | | 200, array, newest first |
-| POST | `/api/savings/{id}/transactions` | `{ type: "Contribution" \| "Withdrawal", amount, date, note? }` | 201 |
+| GET | `/api/savings/{id}/transactions` | | 200, array of `{ id, type, amount, date, note, fromOutside, expenseId, createdAt }`, newest first |
+| POST | `/api/savings/{id}/transactions` | `{ type: "Contribution" \| "Withdrawal", amount, date, note?, fromOutside?, recordExpense?, category? }` | 200 Goal |
 
 Goal: `{ id, name, description, targetAmount, savedAmount, remainingAmount, percentSaved,
 targetDate, daysLeft, expectedByToday, status: "Active" | "Completed" | "Archived", createdAt }`.
+For a fund, `targetAmount` and `targetDate` are `null`, `percentSaved` and `remainingAmount` are 0,
+and it is never `Completed`. `startingAmount` adds a first deposit dated today with `fromOutside: true`.
 Rules: a new target date cannot be in the past; transactions cannot be dated in the future;
-a withdrawal cannot exceed the saved amount; archived goals accept no transactions.
+a withdrawal cannot exceed the saved amount; archived goals accept no transactions;
+`recordExpense` needs a `category`.
 
 ### Bills
 A bill is a schedule (`OneTime`, `Weekly`, `Monthly` or `Yearly`), so its due dates are

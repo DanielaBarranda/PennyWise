@@ -767,6 +767,99 @@
   color: var(--muted);
 }
 
+/* ================= Savings total and funds ================= */
+.savings-total {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--gold) 10%, var(--surface));
+}
+
+.savings-total__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: var(--gold);
+}
+
+.savings-total p {
+  margin: 0;
+}
+
+.savings-total__label,
+.savings-total__note {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.savings-total__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.cover__options--stacked .cover__option {
+  grid-template-columns: auto 1fr;
+  row-gap: 2px;
+}
+
+.cover__options--stacked .cover__option-room {
+  grid-column: 2;
+  text-align: left;
+}
+
+.goal__fund-note {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.goal--fund .goal__actions {
+  margin-top: auto;
+}
+
+.history__source {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+.savings-preview__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.savings-preview__total strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table__note {
+  display: block;
+  color: var(--gold);
+  font-size: var(--fs-xs);
+}
+
+.expense-table__paid-from {
+  color: var(--gold);
+}
+
 /* ================= Money left from last period ================= */
 .leftover {
   display: flex;

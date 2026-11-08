@@ -154,7 +154,7 @@ function LeftoverForm({ offer, budget, unit, from, onClose, onDone }) {
                   {goals === null && <option value="">Loading goals…</option>}
                   {goals?.map((g) => (
                     <option key={g.id} value={g.id}>
-                      {g.name}: {formatPeso(g.savedAmount)} of {formatPeso(g.targetAmount)}
+                      {g.name}: {formatPeso(g.savedAmount)}{g.targetAmount != null ? ` of ${formatPeso(g.targetAmount)}` : ''}
                     </option>
                   ))}
                 </select>

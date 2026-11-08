@@ -139,13 +139,19 @@ export default function ReportsPage({ month, onMonthChange, period }) {
                 <div><dt>Set aside this month</dt><dd>{formatPeso(report.savings.contributions)}</dd></div>
                 <div><dt>Withdrawn</dt><dd>{formatPeso(report.savings.withdrawals)}</dd></div>
                 <div><dt>Net</dt><dd>{signedPeso(report.savings.net)}</dd></div>
+                <div><dt>Of that, from your budgets</dt><dd>{formatPeso(report.savings.fromBudget ?? 0)}</dd></div>
+                {report.savings.spentFromSavings > 0 && (
+                  <div><dt>Spent from savings</dt><dd>{formatPeso(report.savings.spentFromSavings)}</dd></div>
+                )}
               </dl>
               {report.savings.goals.length > 0 && (
                 <ul className="report__goals">
                   {report.savings.goals.map((g) => (
                     <li key={g.name}>
                       <span className="report__goal-name">{g.name}</span>
-                      <span className="report__goal-amounts">{formatPeso(g.savedAtMonthEnd)} of {formatPeso(g.targetAmount)} ({g.percentAtMonthEnd}%)</span>
+                      <span className="report__goal-amounts">
+                        {g.targetAmount == null ? formatPeso(g.savedAtMonthEnd) : `${formatPeso(g.savedAtMonthEnd)} of ${formatPeso(g.targetAmount)} (${g.percentAtMonthEnd}%)`}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -263,7 +269,9 @@ function ReportTransactions({ transactions, month, defaultGroup }) {
                       <td className="data-table__muted data-table__date">{formatDate(t.date)}</td>
                       <td>
                         <span className="data-table__text">
-                          <span>{savings ? `${t.kind === 'SavingsDeposit' ? 'Saved for' : 'Took out of'} ${t.category}` : t.description}</span>
+                          <span>{savings ? `${t.kind === 'SavingsDeposit' ? 'Added to' : 'Took out of'} ${t.category}` : t.description}</span>
+                          {t.paidFrom && <span className="report__carry">Paid from {t.paidFrom}, not from the budget</span>}
+                          {t.fromOutside && <span className="report__carry">Not from the budget</span>}
                           {/* Phones hide the Date and Category columns; this line replaces them. */}
                           <span className="data-table__mobile-meta">{savings ? 'Savings' : t.category}, {formatDate(t.date)}</span>
                         </span>

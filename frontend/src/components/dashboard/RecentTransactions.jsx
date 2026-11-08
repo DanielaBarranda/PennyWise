@@ -13,12 +13,14 @@ function mergeRecent(expenses, savings) {
     ...expenses.map((e) => ({
       key: `e${e.id}`, date: e.expenseDate, createdAt: e.createdAt, title: e.description,
       category: e.category, icon: undefined, amount: formatPeso(e.amount), href: '#/expenses',
+      note: e.paidFrom ? `Paid from ${e.paidFrom}` : null,
     })),
     ...savings.map((s) => {
       const deposit = s.type === 'Contribution'
       return {
         key: `s${s.id}`, date: s.date, createdAt: s.createdAt,
-        title: deposit ? `Saved for ${s.goalName}` : `Took out of ${s.goalName}`,
+        title: deposit ? `Added to ${s.goalName}` : `Took out of ${s.goalName}`,
+        note: deposit && s.fromOutside ? 'Not from your budget' : null,
         category: 'Savings', icon: 'piggy',
         // A withdrawal gives money back to the budget.
         amount: deposit ? formatPeso(s.amount) : `+${formatPeso(s.amount)}`,
@@ -79,6 +81,7 @@ export default function RecentTransactions({ expenses, savings = [], period, onA
                       <CategoryIcon category={r.category} icon={r.icon} size="sm" shape="round" />
                       <span className="data-table__text">
                         <span className="data-table__strong">{r.title}</span>
+                        {r.note && <span className="data-table__note">{r.note}</span>}
                         {/* Phones hide the Date and Category columns; this line replaces them. */}
                         <span className="data-table__mobile-meta">
                           {r.category}, {formatDate(r.date)}

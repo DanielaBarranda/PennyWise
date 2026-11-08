@@ -34,11 +34,15 @@ public class ExpenseService(PennyWiseDbContext db, AppClock clock, CurrentUser c
             .ThenByDescending(e => e.Id)
             .ToListAsync();
 
-        return expenses.Select(ExpenseResponse.From).ToList();
+        var paidFrom = await SavingsService.PaidFromAsync(db, expenses.Select(e => e.Id));
+        return expenses.Select(e => ExpenseResponse.From(e, paidFrom)).ToList();
     }
 
-    public async Task<ExpenseResponse> GetAsync(int id) =>
-        ExpenseResponse.From(await FindAsync(id));
+    public async Task<ExpenseResponse> GetAsync(int id)
+    {
+        var expense = await FindAsync(id);
+        return ExpenseResponse.From(expense, await SavingsService.PaidFromAsync(db, [expense.Id]));
+    }
 
     public async Task<ExpenseResponse> CreateAsync(ExpenseRequest request)
     {
@@ -53,13 +57,34 @@ public class ExpenseService(PennyWiseDbContext db, AppClock clock, CurrentUser c
     {
         var expense = await FindAsync(id);
         Apply(expense, request);
+        // Paid from savings: the withdrawal follows the expense's amount and date.
+        var withdrawal = await db.SavingsTransactions.FirstOrDefaultAsync(t => t.ExpenseId == expense.Id);
+        if (withdrawal is not null)
+        {
+            if (expense.ExpenseDate > clock.Today())
+            {
+                throw new ValidationFailedException(nameof(request.ExpenseDate), "An expense paid from savings can't be dated in the future.");
+            }
+            var goal = await db.SavingsGoals.Include(g => g.Transactions).FirstAsync(g => g.Id == withdrawal.GoalId);
+            var available = SavingsService.Saved(goal) + withdrawal.Amount;
+            if (expense.Amount > available)
+            {
+                throw new ValidationFailedException(nameof(request.Amount),
+                    $"It was paid from {goal.Name}, which has {InsightService.Peso(available)} for it.");
+            }
+            withdrawal.Amount = expense.Amount;
+            withdrawal.Date = expense.ExpenseDate;
+        }
         await db.SaveChangesAsync();
-        return ExpenseResponse.From(expense);
+        return ExpenseResponse.From(expense, withdrawal is null ? new Dictionary<int, string>() : await SavingsService.PaidFromAsync(db, [expense.Id]));
     }
 
+    // Deleting an expense paid from savings also undoes its withdrawal, so the money goes back in.
     public async Task DeleteAsync(int id)
     {
         var expense = await FindAsync(id);
+        var withdrawal = await db.SavingsTransactions.FirstOrDefaultAsync(t => t.ExpenseId == expense.Id);
+        if (withdrawal is not null) db.SavingsTransactions.Remove(withdrawal);
         db.Expenses.Remove(expense);
         await db.SaveChangesAsync();
     }

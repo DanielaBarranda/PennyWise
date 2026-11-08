@@ -30,8 +30,8 @@ public class AllowanceService(PennyWiseDbContext db, AppClock clock, CurrentUser
             .Where(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start)
             .Select(b => new { b.Id, b.Amount }).FirstOrDefaultAsync();
         var budget = row?.Amount;
-        var spent = (await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
+        var spent = (await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => e.Amount).ToListAsync()).Sum();
         var saved = await SavingsService.SetAsideAsync(db, userId, first, last);
 

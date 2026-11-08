@@ -47,6 +47,7 @@ export default function SummaryCards({ summary, period, onSetBudget, onShowCateg
       <StatCard icon="spent" tone="gold" label="Total spent" value={formatPeso(summary.totalSpent)}>
         {budget ? `${formatPercent(percent)} of budget used, ${expenseCount}` : expenseCount}
         {summary.saved > 0 && <span className="stat__saved">+ {formatPeso(summary.saved)} moved to savings</span>}
+        {summary.spentFromSavings > 0 && <span className="stat__saved">{formatPeso(summary.spentFromSavings)} more paid from savings</span>}
       </StatCard>
 
       <StatCard

@@ -30,7 +30,10 @@ export default function ExpenseTable({ expenses, caption, onEdit, onDelete }) {
                   <CategoryIcon category={expense.category} />
                   <span className="expense-table__text">
                     <span className="expense-table__description">{expense.description}</span>
-                    <span className="expense-table__category">{expense.category}</span>
+                    <span className="expense-table__category">
+                      {expense.category}
+                      {expense.paidFrom && <span className="expense-table__paid-from"> · Paid from {expense.paidFrom}</span>}
+                    </span>
                     {/* Shown only on phones, where the Date column is hidden. */}
                     <span className="expense-table__mobile-date">{formatDate(expense.expenseDate)}</span>
                   </span>

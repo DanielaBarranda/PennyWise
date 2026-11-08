@@ -278,7 +278,7 @@ namespace PennyWise.Api.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("TargetAmount")
+                    b.Property<decimal?>("TargetAmount")
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("TargetDate")
@@ -312,6 +312,12 @@ namespace PennyWise.Api.Data.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ExpenseId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("FromOutside")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("GoalId")
                         .HasColumnType("INTEGER");
 
@@ -325,6 +331,9 @@ namespace PennyWise.Api.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExpenseId")
+                        .IsUnique();
 
                     b.HasIndex("GoalId", "Date");
 
@@ -523,6 +532,11 @@ namespace PennyWise.Api.Data.Migrations
 
             modelBuilder.Entity("PennyWise.Api.Models.SavingsTransaction", b =>
                 {
+                    b.HasOne("PennyWise.Api.Models.Expense", null)
+                        .WithMany()
+                        .HasForeignKey("ExpenseId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("PennyWise.Api.Models.SavingsGoal", null)
                         .WithMany("Transactions")
                         .HasForeignKey("GoalId")

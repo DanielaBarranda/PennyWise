@@ -29,8 +29,8 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser, Ca
         // SQLite cannot SUM decimal columns exactly, so the period's expenses are
         // loaded and added up in C# with decimal arithmetic. One person's month
         // of expenses is small, so this is fast.
-        var expenses = await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
+        var expenses = await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= first && e.ExpenseDate <= last)
             .ToListAsync();
 
         var totalSpent = expenses.Sum(e => e.Amount);
@@ -47,23 +47,27 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser, Ca
             return new CategorySummary(category.ToString(), total, limit, limit is null ? "NoLimit" : StatusFor(total, limit.Value));
         }).ToList();
 
-        var recent = expenses
+        // Recent activity includes expenses paid from savings (marked with where from).
+        var recentRows = await db.Expenses.AsNoTracking()
+            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
             .OrderByDescending(e => e.ExpenseDate)
             .ThenByDescending(e => e.CreatedAt)
             .ThenByDescending(e => e.Id)
             .Take(RecentCount)
-            .Select(ExpenseResponse.From)
-            .ToList();
+            .ToListAsync();
+        var paidFrom = await SavingsService.PaidFromAsync(db, recentRows.Select(e => e.Id));
+        var recent = recentRows.Select(e => ExpenseResponse.From(e, paidFrom)).ToList();
 
         // Savings moves are listed beside expenses, since they also use the budget.
         var recentSavings = await db.SavingsTransactions.AsNoTracking()
             .Where(t => t.Date >= first && t.Date <= last && db.SavingsGoals.Any(g => g.Id == t.GoalId && g.UserId == userId))
+            .Where(t => t.ExpenseId == null) // a withdrawal that paid an expense shows as that expense
             .OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
             .Take(RecentCount)
             .Select(t => new RecentSavingsMove(
                 t.Id, t.GoalId,
                 db.SavingsGoals.Where(g => g.Id == t.GoalId).Select(g => g.Name).First(),
-                t.Type.ToString(), t.Amount, t.Date, t.Note, t.CreatedAt))
+                t.Type.ToString(), t.Amount, t.Date, t.Note, t.FromOutside, t.CreatedAt))
             .ToListAsync();
 
         return new DashboardSummaryResponse(
@@ -73,6 +77,7 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser, Ca
             Month: window.Month,
             Budget: budget is null ? null : BudgetResponse.From(budget),
             TotalSpent: totalSpent,
+            SpentFromSavings: await SavingsService.SpentFromSavingsAsync(db, userId, first, last),
             Saved: saved,
             CarriedIn: await CarryOverService.CarriedInAsync(db, budget?.Id),
             CarriedOut: carriedOut,

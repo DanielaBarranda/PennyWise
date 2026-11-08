@@ -22,13 +22,18 @@ public record MonthlyReportResponse(
 
 // Kind: Expense | SavingsDeposit | SavingsWithdrawal. Category is the expense
 // category, or the goal's name for a savings move.
-public record ReportTransaction(DateOnly Date, string Kind, string Description, string Category, decimal Amount);
+// PaidFrom: for an expense paid from savings, the goal or fund's name (not counted in the budget).
+// FromOutside: for a deposit, true when it did not come from a budget.
+public record ReportTransaction(DateOnly Date, string Kind, string Description, string Category, decimal Amount,
+    string? PaidFrom = null, bool FromOutside = false);
 
 public record ReportCategory(string Category, decimal Total, decimal SharePercent, decimal? Limit, decimal PreviousTotal, decimal Change);
 
-public record ReportSavings(decimal Contributions, decimal Withdrawals, decimal Net, List<ReportGoal> Goals);
+// FromBudget: the part of Net that came out of budgets (deposits from a budget minus plain withdrawals, at least 0).
+// SpentFromSavings: expenses paid with money taken out of savings (also inside Withdrawals).
+public record ReportSavings(decimal Contributions, decimal Withdrawals, decimal Net, decimal FromBudget, decimal SpentFromSavings, List<ReportGoal> Goals);
 
-public record ReportGoal(string Name, decimal TargetAmount, decimal SavedAtMonthEnd, decimal PercentAtMonthEnd, decimal ContributedThisMonth, decimal WithdrawnThisMonth);
+public record ReportGoal(string Name, decimal? TargetAmount, decimal SavedAtMonthEnd, decimal PercentAtMonthEnd, decimal ContributedThisMonth, decimal WithdrawnThisMonth);
 
 // Left = Amount - Spent - Saved (moved into savings within the budget's dates)
 //        - CarriedOut (added to the next period's budget). Amount already includes CarriedIn.

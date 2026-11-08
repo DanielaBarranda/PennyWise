@@ -47,8 +47,8 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
 
         var budget = await db.Budgets.AsNoTracking().Include(b => b.CategoryLimits)
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == window.Period && b.StartDate == window.Start);
-        var expenses = await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
+        var expenses = await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= first && e.ExpenseDate <= last)
             .Select(e => new { e.Amount, e.Category, e.ExpenseDate }).ToListAsync();
         var spent = expenses.Sum(e => e.Amount);
 
@@ -135,8 +135,8 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
         var prevFirst = first.AddMonths(-1);
         var prevEnd = prevFirst.AddDays(Math.Min(span, DateTime.DaysInMonth(prevFirst.Year, prevFirst.Month)) - 1);
         var thisEnd = first.AddDays(span - 1);
-        var previous = await db.Expenses.AsNoTracking()
-            .Where(e => e.UserId == userId && e.ExpenseDate >= prevFirst && e.ExpenseDate <= prevEnd)
+        var previous = await SavingsService.BudgetExpenses(db, userId)
+            .Where(e => e.ExpenseDate >= prevFirst && e.ExpenseDate <= prevEnd)
             .Select(e => new { e.Amount, e.Category }).ToListAsync();
         var comparisons = Enum.GetValues<Category>()
             .Where(c => !flagged.Contains(c))
@@ -173,7 +173,7 @@ public class InsightService(PennyWiseDbContext db, AppClock clock, CurrentUser c
             if (g.Status == "Completed")
             {
                 insights.Add(new($"goal-done-{goal.Id}", "Success", "Fact", "Savings goal reached",
-                    $"You've reached your {goal.Name} goal of {Peso(goal.TargetAmount)}.", "savings", true));
+                    $"You've reached your {goal.Name} goal of {Peso(goal.TargetAmount!.Value)}.", "savings", true));
             }
             else if (isCurrent && g.DaysLeft is > 0 and <= 90 && g.ExpectedByToday is { } expected && g.SavedAmount < expected)
             {
