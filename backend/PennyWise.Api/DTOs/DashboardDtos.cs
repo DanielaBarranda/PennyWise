@@ -13,6 +13,10 @@ public record DashboardSummaryResponse(
     string Status,
     int ExpenseCount,
     List<CategorySummary> Categories,
-    List<ExpenseResponse> RecentExpenses);
+    List<ExpenseResponse> RecentExpenses,
+    List<RecentSavingsMove> RecentSavings); // up to 5 deposits/withdrawals in the period, newest first
+
+// A deposit to or withdrawal from a savings goal, for the Recent transactions list.
+public record RecentSavingsMove(int Id, int GoalId, string GoalName, string Type, decimal Amount, DateOnly Date, string? Note, DateTime CreatedAt);
 
 public record CategorySummary(string Category, decimal Total, decimal? Limit, string Status);

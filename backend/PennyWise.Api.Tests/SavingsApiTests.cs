@@ -142,6 +142,39 @@ public class SavingsApiTests : FeatureTestBase
     }
 
     [Fact]
+    public async Task The_dashboard_lists_the_periods_savings_moves_newest_first()
+    {
+        await PostAsync<BudgetResponse>("/api/budgets", new { period = "Weekly", start = "2026-10-19", amount = 1000 });
+        var goal = await CreateGoalAsync("Treadmill", 5000);
+        await AddSavingsAsync(goal.Id, "Contribution", 300, "2026-10-16"); // last week: not listed
+        await AddSavingsAsync(goal.Id, "Contribution", 100, "2026-10-19");
+        await AddSavingsAsync(goal.Id, "Withdrawal", 40, "2026-10-20");
+
+        var summary = await Client.GetFromJsonAsync<DashboardSummaryResponse>("/api/dashboard/summary?period=Weekly&date=2026-10-20");
+
+        Assert.Equal([("Withdrawal", 40m, "Treadmill"), ("Contribution", 100m, "Treadmill")],
+            summary!.RecentSavings.Select(s => (s.Type, s.Amount, s.GoalName)));
+    }
+
+    [Fact]
+    public async Task The_report_lists_every_expense_and_savings_move_in_the_month()
+    {
+        var goal = await CreateGoalAsync("Treadmill", 5000);
+        await CreateExpenseAsync(45, "Others", "2026-10-05");
+        await AddSavingsAsync(goal.Id, "Contribution", 100, "2026-10-03");
+        await AddSavingsAsync(goal.Id, "Withdrawal", 20, "2026-10-12");
+        await CreateExpenseAsync(99, "Food", "2026-09-30"); // last month: not listed
+
+        var report = await Client.GetFromJsonAsync<MonthlyReportResponse>("/api/reports/monthly?month=2026-10");
+
+        Assert.Equal([(new DateOnly(2026, 10, 3), "SavingsDeposit", "Treadmill", 100m), (new DateOnly(2026, 10, 5), "Expense", "Others", 45m),
+                      (new DateOnly(2026, 10, 12), "SavingsWithdrawal", "Treadmill", 20m)],
+            report!.Transactions.Select(t => (t.Date, t.Kind, t.Category, t.Amount)));
+        var csv = await Client.GetStringAsync("/api/reports/monthly.csv?month=2026-10");
+        Assert.Contains("2026-10-03,Savings deposit,Saved,Treadmill,100.00", csv);
+    }
+
+    [Fact]
     public async Task Saving_past_the_budget_shows_the_over_budget_insight()
     {
         await CreateBudgetAsync("2026-10", 1000);

@@ -162,7 +162,8 @@ Everything in it is for that one period: its own budget and the expenses dated i
     { "category": "Food", "total": 3150.00, "limit": 3000.00, "status": "Exceeded" },
     { "category": "School", "total": 0, "limit": null, "status": "NoLimit" }
   ],
-  "recentExpenses": [ "...up to 5 Expense objects, newest expenseDate first..." ]
+  "recentExpenses": [ "...up to 5 Expense objects, newest expenseDate first..." ],
+  "recentSavings": [ "...up to 5 savings moves in the period, newest first: { id, goalId, goalName, type, amount, date, note, createdAt }..." ]
 }
 ```
 
@@ -270,6 +271,8 @@ month are listed separately (`periodBudgets`: period, start, end, amount, the sp
 money moved into savings inside their own dates, and `left = amount − spent − saved`); they are
 never added up into a monthly budget. `budgetUsedPercent` and `remaining` count spending plus the
 month's net savings deposits.
+
+`transactions` lists every expense and savings move dated in the month, oldest first: `{ date, kind, description, category, amount }`, where `kind` is `Expense`, `SavingsDeposit` or `SavingsWithdrawal`, and `category` is the goal name for a savings move. The page groups them by day, week or month. The CSV has the same list.
 
 Paid bills recorded as expenses are counted once, in spending. Income is not recorded in
 PennyWise, so the report shows no income or net cash flow.

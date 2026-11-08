@@ -96,6 +96,21 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
                 savedInWindow, b.Amount - spentInWindow - savedInWindow));
         }
 
+        // Every transaction in the month, so each day, week or month can be checked line by line.
+        var monthExpenses = await db.Expenses.AsNoTracking()
+            .Where(e => e.UserId == userId && e.ExpenseDate >= first && e.ExpenseDate <= last)
+            .Select(e => new { e.ExpenseDate, e.Description, e.Category, e.Amount, e.CreatedAt, e.Id }).ToListAsync();
+        var goalNames = goals.ToDictionary(g => g.Id, g => g.Name);
+        var transactions = monthExpenses
+            .Select(e => (Row: new ReportTransaction(e.ExpenseDate, "Expense", e.Description, e.Category.ToString(), e.Amount), e.CreatedAt))
+            .Concat(monthTx.Select(t => (Row: new ReportTransaction(t.Date,
+                t.Type == SavingsTransactionType.Contribution ? "SavingsDeposit" : "SavingsWithdrawal",
+                string.IsNullOrWhiteSpace(t.Note) ? (t.Type == SavingsTransactionType.Contribution ? "Saved" : "Took out") : t.Note!,
+                goalNames[t.GoalId], t.Amount), t.CreatedAt)))
+            .OrderBy(x => x.Row.Date).ThenBy(x => x.CreatedAt)
+            .Select(x => x.Row)
+            .ToList();
+
         var notes = new List<string>
         {
             "Income is not recorded in PennyWise, so this report shows no income or net cash flow.",
@@ -121,6 +136,7 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             new ReportSavings(contributions, withdrawals, contributions - withdrawals, reportGoals),
             new ReportBills(billItems.Count, paid.Count, unpaid.Count, paid.Sum(b => b.Amount), unpaid.Sum(b => b.Amount), billItems),
             reportPeriodBudgets,
+            transactions,
             await insights.GetAsync(BudgetWindow.For(BudgetPeriod.Monthly, first)),
             notes);
     }
@@ -153,6 +169,13 @@ public class ReportService(PennyWiseDbContext db, CurrentUser currentUser, BillS
             foreach (var b in r.PeriodBudgets) Row(b.Period, b.Start, b.End, b.Amount, b.Spent, b.Saved, b.Left);
             Row();
         }
+        Row("Date", "Transaction", "Description", "Category or goal", "Amount");
+        foreach (var t in r.Transactions)
+        {
+            var kind = t.Kind switch { "SavingsDeposit" => "Savings deposit", "SavingsWithdrawal" => "Savings withdrawal", _ => "Expense" };
+            Row(t.Date, kind, t.Description, t.Category, t.Amount);
+        }
+        Row();
         Row("Savings", "Value");
         Row("Deposited this month", r.Savings.Contributions);
         Row("Withdrawn this month", r.Savings.Withdrawals);

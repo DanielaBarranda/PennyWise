@@ -97,7 +97,7 @@ export default function DashboardPage({ period, start, onStartChange }) {
             <UpcomingBills refreshKey={refreshKey} onPaid={reload} />
             <SavingsPreview refreshKey={refreshKey} />
           </div>
-          <RecentTransactions expenses={current.recentExpenses} period={period} onAdd={() => setExpenseOpen(true)} />
+          <RecentTransactions expenses={current.recentExpenses} savings={current.recentSavings ?? []} period={period} onAdd={() => setExpenseOpen(true)} />
         </div>
       )}
 

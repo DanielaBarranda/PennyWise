@@ -730,6 +730,43 @@
   margin-top: 3px;
 }
 
+.report__transactions .card__header {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.report__tx-table {
+  font-size: var(--fs-sm);
+}
+
+.report__tx-group th {
+  padding-top: 10px;
+  padding-bottom: 6px;
+  background: var(--surface-sunk);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: left;
+}
+
+.report__tx-group-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.report__tx-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.report__tx-saved {
+  color: var(--muted);
+}
+
 /* ================= Print / Save as PDF ================= */
 /* Prints the report on white paper, whatever theme is on screen. */
 @media print {
@@ -778,6 +815,163 @@
 
   .table-wrap {
     overflow: visible;
+  }
+
+  /* Compact, so an ordinary month fits on one A4/Letter page. */
+  @page {
+    margin: 10mm;
+  }
+
+  html {
+    font-size: 10px;
+  }
+
+  .page-header {
+    margin-bottom: 8px;
+  }
+
+  .report {
+    gap: 8px;
+  }
+
+  .report__summary,
+  .report__columns {
+    gap: 8px;
+  }
+
+  .report__summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .report__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card,
+  .stat {
+    padding: 8px 10px;
+    border-radius: 6px;
+  }
+
+  .card--flush {
+    padding: 0;
+  }
+
+  .card__header,
+  .card__header--padded {
+    padding: 6px 10px;
+    margin-bottom: 0;
+  }
+
+  .card__body,
+  .card__footnote {
+    padding: 4px 10px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 3px 10px;
+  }
+
+  .report__facts div,
+  .report__goals li,
+  .report__bills li {
+    padding: 3px 0;
+  }
+
+  .stat__value {
+    font-size: 1.25rem;
+  }
+
+  /* Long tables can still continue onto a next page. */
+  .report__transactions {
+    break-inside: auto;
+  }
+
+  .report__group-picker,
+  .report .insight__icon,
+  .report .category-icon {
+    display: none;
+  }
+
+  .report .data-table th,
+  .report .data-table td,
+  .report .report__tx-group th {
+    padding: 2px 10px;
+    line-height: 1.35;
+  }
+
+  .report__tx-table,
+  .report .data-table {
+    font-size: 0.95rem;
+  }
+
+  .report .card__footnote,
+  .report__notes {
+    font-size: 0.85rem;
+  }
+
+  /* These repeat the notes at the end of the report. */
+  .report .card__footnote:not(.report__tx-note) {
+    display: none;
+  }
+
+  .report .card__header h2 {
+    font-size: 1.1rem;
+  }
+
+  .report .card:not(.card--flush) > .card__header {
+    padding: 0 0 4px;
+  }
+
+  .report .card__footnote.report__tx-note {
+    margin: 0;
+    padding: 4px 10px 6px;
+  }
+
+  .report .report__facts div,
+  .report .report__goals li,
+  .report .report__bills li {
+    padding: 1px 0;
+  }
+
+  .report .report__goals,
+  .report .report__bills {
+    margin-top: 4px;
+  }
+
+  .report .insight {
+    padding: 2px 0;
+  }
+
+  .content,
+  .main {
+    padding: 0 !important;
+  }
+
+  .page-header__subtitle {
+    margin-top: 0;
+  }
+
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .report__notes {
+    gap: 2px;
+  }
+
+  .report .stat__note {
+    margin-top: 0;
+  }
+
+  .data-table__mobile-meta {
+    display: none !important;
+  }
+
+  .data-table__date,
+  .data-table__category {
+    display: table-cell !important;
   }
 }
 

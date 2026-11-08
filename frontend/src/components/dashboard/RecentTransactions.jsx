@@ -4,19 +4,45 @@ import { EmptyState } from '../common/States.jsx'
 import { THIS_PERIOD } from '../../utils/budgetPeriod.js'
 import { formatDate, formatPeso } from '../../utils/format.js'
 
-export default function RecentTransactions({ expenses, period, onAdd }) {
+const RECENT_COUNT = 5
+
+// Expenses and savings moves both use the period's budget, so the list shows
+// the newest five of either kind.
+function mergeRecent(expenses, savings) {
+  const rows = [
+    ...expenses.map((e) => ({
+      key: `e${e.id}`, date: e.expenseDate, createdAt: e.createdAt, title: e.description,
+      category: e.category, icon: undefined, amount: formatPeso(e.amount), href: '#/expenses',
+    })),
+    ...savings.map((s) => {
+      const deposit = s.type === 'Contribution'
+      return {
+        key: `s${s.id}`, date: s.date, createdAt: s.createdAt,
+        title: deposit ? `Saved for ${s.goalName}` : `Took out of ${s.goalName}`,
+        category: 'Savings', icon: 'piggy',
+        // A withdrawal gives money back to the budget.
+        amount: deposit ? formatPeso(s.amount) : `+${formatPeso(s.amount)}`,
+      }
+    }),
+  ]
+  rows.sort((a, b) => (a.date === b.date ? String(b.createdAt).localeCompare(String(a.createdAt)) : b.date.localeCompare(a.date)))
+  return rows.slice(0, RECENT_COUNT)
+}
+
+export default function RecentTransactions({ expenses, savings = [], period, onAdd }) {
+  const rows = mergeRecent(expenses, savings)
   return (
     <section className="card card--flush" aria-labelledby="recent-heading">
       <div className="card__header card__header--padded">
         <h2 id="recent-heading">Recent transactions</h2>
-        {expenses.length > 0 && (
+        {rows.length > 0 && (
           <a href="#/expenses" className="button button--link">
             View all
           </a>
         )}
       </div>
 
-      {expenses.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="card__body">
           <EmptyState
             compact
@@ -33,7 +59,7 @@ export default function RecentTransactions({ expenses, period, onAdd }) {
       ) : (
         <div className="table-wrap">
           <table className="data-table">
-            <caption className="visually-hidden">Five most recent expenses {THIS_PERIOD[period] ?? 'this month'}</caption>
+            <caption className="visually-hidden">Five most recent expenses and savings {THIS_PERIOD[period] ?? 'this month'}</caption>
             <thead>
               <tr>
                 <th scope="col">Date</th>
@@ -45,25 +71,25 @@ export default function RecentTransactions({ expenses, period, onAdd }) {
               </tr>
             </thead>
             <tbody>
-              {expenses.map((e) => (
-                <tr key={e.id}>
-                  <td className="data-table__muted data-table__date">{formatDate(e.expenseDate)}</td>
+              {rows.map((r) => (
+                <tr key={r.key}>
+                  <td className="data-table__muted data-table__date">{formatDate(r.date)}</td>
                   <td>
                     <div className="data-table__cell">
-                      <CategoryIcon category={e.category} size="sm" shape="round" />
+                      <CategoryIcon category={r.category} icon={r.icon} size="sm" shape="round" />
                       <span className="data-table__text">
-                        <span className="data-table__strong">{e.description}</span>
+                        <span className="data-table__strong">{r.title}</span>
                         {/* Phones hide the Date and Category columns; this line replaces them. */}
                         <span className="data-table__mobile-meta">
-                          {e.category}, {formatDate(e.expenseDate)}
+                          {r.category}, {formatDate(r.date)}
                         </span>
                       </span>
                     </div>
                   </td>
                   <td className="data-table__category">
-                    <CategoryBadge category={e.category} />
+                    <CategoryBadge category={r.category} icon={r.icon} />
                   </td>
-                  <td className="num data-table__strong data-table__amount">{formatPeso(e.amount)}</td>
+                  <td className="num data-table__strong data-table__amount">{r.amount}</td>
                 </tr>
               ))}
             </tbody>

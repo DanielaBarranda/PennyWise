@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CategoryIcon } from '../components/common/CategoryBadge.jsx'
 import Icon from '../components/common/Icon.jsx'
 import PageHeader from '../components/common/PageHeader.jsx'
@@ -7,7 +8,7 @@ import { STATUS_LABELS, STATUS_TONES } from '../components/bills/billText.js'
 import InsightList from '../components/insights/InsightList.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { api } from '../services/api.js'
-import { periodLabel } from '../utils/budgetPeriod.js'
+import { periodLabel, periodStart } from '../utils/budgetPeriod.js'
 import { formatDate, formatMonth, formatPeso } from '../utils/format.js'
 
 const signedPeso = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatPeso(Math.abs(value))}`
@@ -15,7 +16,7 @@ const signedPercent = (value) => (value == null ? '—' : `${value > 0 ? '+' : v
 
 // Every figure comes from GET /api/reports/monthly; the CSV download is built by
 // the API from the same report, so the file always matches this page.
-export default function ReportsPage({ month, onMonthChange }) {
+export default function ReportsPage({ month, onMonthChange, period }) {
   const { data, error, reload } = useAsync(() => api.getMonthlyReport(month), [month])
   const report = data?.month === month ? data : null
   const isEmpty = report && report.expenseCount === 0 && report.budget == null && report.savings.goals.length === 0 && report.bills.due === 0 && report.periodBudgets.length === 0
@@ -127,6 +128,8 @@ export default function ReportsPage({ month, onMonthChange }) {
             </section>
           )}
 
+          <ReportTransactions transactions={report.transactions ?? []} month={month} defaultGroup={period ?? 'Monthly'} />
+
           <div className="report__columns">
             <section className="card" aria-labelledby="report-savings">
               <div className="card__header"><h2 id="report-savings">Savings</h2></div>
@@ -181,6 +184,105 @@ export default function ReportsPage({ month, onMonthChange }) {
         </div>
       )}
     </>
+  )
+}
+
+const GROUPS = [
+  ['Daily', 'By day'],
+  ['Weekly', 'By week'],
+  ['Monthly', 'Whole month'],
+]
+
+// Every expense and savings move in the month, grouped by day, week or the whole
+// month, with each group's totals. Starts on the account's budget period.
+function ReportTransactions({ transactions, month, defaultGroup }) {
+  const [group, setGroup] = useState(defaultGroup)
+  const groups = []
+  for (const t of transactions) {
+    const key = periodStart(group, t.date)
+    let g = groups[groups.length - 1]
+    if (!g || g.key !== key) {
+      g = { key, rows: [], spent: 0, saved: 0 }
+      groups.push(g)
+    }
+    g.rows.push(t)
+    if (t.kind === 'Expense') g.spent += t.amount
+    else g.saved += t.kind === 'SavingsDeposit' ? t.amount : -t.amount
+  }
+
+  return (
+    <section className="card card--flush report__transactions" aria-labelledby="report-transactions">
+      <div className="card__header card__header--padded">
+        <h2 id="report-transactions">Transactions</h2>
+        {transactions.length > 0 && (
+          <fieldset className="segmented report__group-picker">
+            <legend className="visually-hidden">Group transactions</legend>
+            {GROUPS.map(([value, label]) => (
+              <label key={value} className="segmented__option">
+                <input type="radio" name="report-group" value={value} checked={group === value} onChange={() => setGroup(value)} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+      </div>
+      {transactions.length === 0 ? (
+        <div className="card__body"><EmptyState compact title={`No transactions in ${formatMonth(month)}`} /></div>
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table report__tx-table">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Category</th>
+                <th scope="col" className="num">Amount</th>
+              </tr>
+            </thead>
+            {groups.map((g) => (
+              <tbody key={g.key}>
+                {group !== 'Monthly' && (
+                  <tr className="report__tx-group">
+                    <th scope="rowgroup" colSpan={4}>
+                      <span className="report__tx-group-row">
+                        <span>{periodLabel(group, g.key)}</span>
+                        <span className="report__tx-totals">
+                          <span>Spent {formatPeso(g.spent)}</span>
+                          {g.saved !== 0 && <span className="report__tx-saved">{g.saved > 0 ? 'Saved' : 'Taken from savings'} {formatPeso(Math.abs(g.saved))}</span>}
+                        </span>
+                      </span>
+                    </th>
+                  </tr>
+                )}
+                {g.rows.map((t, i) => {
+                  const savings = t.kind !== 'Expense'
+                  return (
+                    <tr key={`${g.key}-${i}`}>
+                      <td className="data-table__muted data-table__date">{formatDate(t.date)}</td>
+                      <td>
+                        <span className="data-table__text">
+                          <span>{savings ? `${t.kind === 'SavingsDeposit' ? 'Saved for' : 'Took out of'} ${t.category}` : t.description}</span>
+                          {/* Phones hide the Date and Category columns; this line replaces them. */}
+                          <span className="data-table__mobile-meta">{savings ? 'Savings' : t.category}, {formatDate(t.date)}</span>
+                        </span>
+                      </td>
+                      <td className="data-table__category">
+                        <span className="data-table__cell">
+                          <CategoryIcon category={savings ? 'Savings' : t.category} icon={savings ? 'piggy' : undefined} size="sm" shape="round" />
+                          {savings ? 'Savings' : t.category}
+                        </span>
+                      </td>
+                      <td className="num data-table__strong data-table__amount">{t.kind === 'SavingsWithdrawal' ? `+${formatPeso(t.amount)}` : formatPeso(t.amount)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      )}
+      <p className="card__footnote report__tx-note">Savings moves are listed here but are not counted as spending. A withdrawal (+) goes back to your budget.</p>
+    </section>
   )
 }
 

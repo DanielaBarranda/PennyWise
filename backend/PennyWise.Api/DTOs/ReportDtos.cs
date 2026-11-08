@@ -16,8 +16,13 @@ public record MonthlyReportResponse(
     ReportSavings Savings,
     ReportBills Bills,
     List<ReportPeriodBudget> PeriodBudgets, // weekly and daily budgets starting this month
+    List<ReportTransaction> Transactions,   // every expense and savings move dated this month, oldest first
     List<InsightResponse> Insights,
     List<string> Notes);
+
+// Kind: Expense | SavingsDeposit | SavingsWithdrawal. Category is the expense
+// category, or the goal's name for a savings move.
+public record ReportTransaction(DateOnly Date, string Kind, string Description, string Category, decimal Amount);
 
 public record ReportCategory(string Category, decimal Total, decimal SharePercent, decimal? Limit, decimal PreviousTotal, decimal Change);
 

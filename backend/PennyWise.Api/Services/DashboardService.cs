@@ -53,6 +53,17 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             .Select(ExpenseResponse.From)
             .ToList();
 
+        // Savings moves are listed beside expenses, since they also use the budget.
+        var recentSavings = await db.SavingsTransactions.AsNoTracking()
+            .Where(t => t.Date >= first && t.Date <= last && db.SavingsGoals.Any(g => g.Id == t.GoalId && g.UserId == userId))
+            .OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
+            .Take(RecentCount)
+            .Select(t => new RecentSavingsMove(
+                t.Id, t.GoalId,
+                db.SavingsGoals.Where(g => g.Id == t.GoalId).Select(g => g.Name).First(),
+                t.Type.ToString(), t.Amount, t.Date, t.Note, t.CreatedAt))
+            .ToListAsync();
+
         return new DashboardSummaryResponse(
             Period: window.Period.ToString(),
             Start: window.Start,
@@ -66,7 +77,8 @@ public class DashboardService(PennyWiseDbContext db, CurrentUser currentUser)
             Status: budget is null ? "NoBudget" : StatusFor(used, budget.Amount),
             ExpenseCount: expenses.Count,
             Categories: categories,
-            RecentExpenses: recent);
+            RecentExpenses: recent,
+            RecentSavings: recentSavings);
     }
 
     // Below 80% = OnTrack, 80% up to 100% = Warning, above 100% = Exceeded.

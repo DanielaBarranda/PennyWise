@@ -11,6 +11,8 @@ export const CATEGORY_COLORS = {
   Bills: 'var(--cat-bills)',
   Entertainment: 'var(--cat-entertainment)',
   Others: 'var(--cat-others)',
+  // Not an expense category: savings moves in Recent transactions.
+  Savings: 'var(--gold)',
 }
 
 // Must match the threshold the API uses for its "Warning" status.
